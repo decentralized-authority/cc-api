@@ -1,0 +1,58 @@
+{
+  "name": "cc-api",
+  "version": "0.4.0",
+  "description": "cc-api",
+  "main": "./lib/index.js",
+  "scripts": {
+    "start": "node ./lib",
+    "test": "ts-mocha -p ./tsconfig.json './src/**/*.spec.ts'",
+    "build": "npm run clear-build-dir && tsc",
+    "watch": "tsc -w",
+    "package": "npm run build && node ./scripts/package",
+    "clear-build-dir": "node ./scripts/clear-build-dir"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/decentralized-authority/cc-api.git"
+  },
+  "author": "Ryan Burgett <ryan@burgettdev.net>",
+  "bugs": {
+    "url": "https://github.com/decentralized-authority/cc-api/issues"
+  },
+  "homepage": "https://github.com/decentralized-authority/cc-api#readme",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.108",
+    "@types/dynogels": "^9.0.6",
+    "@types/fs-extra": "^9.0.13",
+    "@types/joi": "^14.3.4",
+    "@types/libsodium-wrappers": "^0.7.10",
+    "@types/lodash": "^4.14.182",
+    "@types/mocha": "^8.2.3",
+    "@types/node": "^16.0.0",
+    "@types/superagent": "^4.1.15",
+    "@types/uuid": "^8.3.4",
+    "eslint": "^7.26.0",
+    "mocha": "^8.0.0",
+    "should": "^13.2.3",
+    "ts-mocha": "^8.0.0",
+    "typescript": "^4.7.4"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudwatch-logs": "^3.276.0",
+    "aws-sdk": "^2.1253.0",
+    "dayjs": "^1.11.4",
+    "dynogels": "https://github.com/clarkie/dynogels.git#9a84dafd1ba54a2a8ceec9204113998b3f11085b",
+    "form-data": "^4.0.0",
+    "fs-extra": "^10.1.0",
+    "joi": "^14.3.1",
+    "libsodium-wrappers": "^0.7.10",
+    "lodash": "^4.17.21",
+    "mailgun.js": "^8.0.4",
+    "mathjs": "^10.6.4",
+    "superagent": "^8.0.0",
+    "uuid": "^8.3.2",
+    "winston": "^3.8.2",
+    "winston-cloudwatch": "^6.1.1"
+  }
+}

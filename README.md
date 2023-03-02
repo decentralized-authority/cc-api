@@ -1,2 +1,2 @@
 # cc-api
-cc-api
+Community Chains API
