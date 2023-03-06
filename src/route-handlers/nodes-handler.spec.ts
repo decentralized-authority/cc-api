@@ -51,6 +51,7 @@ describe('NodesHandler', function() {
       passwordHash: hashPassword(generateId(), salt),
       poktAddress: poktAccount.address,
       chainSalt: generateSalt(),
+      isPartner: false,
       agreeTos: true,
       agreeTosDate: now,
       agreePrivacyPolicy: true,
@@ -94,6 +95,7 @@ describe('NodesHandler', function() {
       address: poktAccount0.address,
       user: account.id,
       chains: [],
+      isPartnerNode: false,
     };
     const poktAccount1 = await createPoktAccount();
     node1 = {
@@ -101,6 +103,7 @@ describe('NodesHandler', function() {
       address: poktAccount1.address,
       user: account.id,
       chains: [],
+      isPartnerNode: false,
     };
     const poktAccount2 = await createPoktAccount();
     node2 = {
@@ -108,6 +111,7 @@ describe('NodesHandler', function() {
       address: poktAccount2.address,
       user: account.id,
       chains: [],
+      isPartnerNode: false,
     };
     await Promise.all([node0, node1, node2].map(n => dbUtils.createNode(n)));
   });
@@ -270,6 +274,7 @@ describe('NodesHandler', function() {
         address: poktAccount.address,
         user: account.id,
         chains: [],
+        isPartnerNode: false,
       };
       await dbUtils.createNode(nodeToDelete);
     });
@@ -316,6 +321,7 @@ describe('NodesHandler', function() {
         address: poktAccount.address,
         user: account.id,
         chains: [],
+        isPartnerNode: false,
       };
       await dbUtils.createNode(nodeToTestChains);
     });
@@ -401,6 +407,7 @@ describe('NodesHandler', function() {
           chain0,
           chain1,
         ],
+        isPartnerNode: false,
       };
       await dbUtils.createNode(nodeToTestChains);
     });
@@ -478,6 +485,7 @@ describe('NodesHandler', function() {
           chain0,
           chain1,
         ],
+        isPartnerNode: false,
       };
       await dbUtils.createNode(nodeToTestChains);
     });

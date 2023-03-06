@@ -108,6 +108,7 @@ describe('ProvidersHandler', function() {
             url: `${generateId()}.test.com`,
           },
         ],
+        isPartnerNode: false,
       });
     }
     await Promise.all(nodes.map(node => dbUtils.createNode(node)));

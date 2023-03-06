@@ -63,6 +63,8 @@ export class NodesHandler extends RouteHandler {
     const [ errResponse, account ] = await getAccountFromToken(this._db, event);
     if(errResponse)
       return errResponse;
+    if(account.isPartner)
+      return httpErrorResponse(403, 'Partners cannot register nodes via the API at this time.');
     if(!body || !goodBody(body, isPlainObject))
       return httpErrorResponse(400, 'Invalid body');
     const parsed = JSON.parse(body);
@@ -85,6 +87,7 @@ export class NodesHandler extends RouteHandler {
       address,
       user: account.id,
       chains: [],
+      isPartnerNode: false,
     };
     await this._dbUtils.createNode(node);
     return httpResponse(200, node);
@@ -108,6 +111,8 @@ export class NodesHandler extends RouteHandler {
     const [ errResponse, account ] = await getAccountFromToken(this._db, event);
     if(errResponse)
       return errResponse;
+    if(account.isPartner)
+      return httpErrorResponse(403, 'Partners cannot delete nodes via the API at this time.');
     // @ts-ignore
     const { address } = pathParameters;
     const node = await this._dbUtils.getNodeByAddress(address, account.id);

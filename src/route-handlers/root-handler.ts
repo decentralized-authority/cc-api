@@ -240,6 +240,7 @@ export class RootHandler extends RouteHandler {
       agreePrivacyPolicyDate: today,
       agreeCookies,
       agreeCookiesDate: today,
+      isPartner: false,
     };
     await new Promise<void>((resolve, reject) => {
       this._db.Accounts.create(account, err => {

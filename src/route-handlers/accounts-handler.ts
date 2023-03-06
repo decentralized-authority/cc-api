@@ -27,6 +27,7 @@ export interface Account {
   passwordHash: string
   poktAddress: string
   chainSalt: string
+  isPartner: boolean
   agreeTos: boolean,
   agreeTosDate: string,
   agreePrivacyPolicy: boolean,

@@ -19,6 +19,7 @@ export interface Node {
   address: string
   user: string
   chains: NodeChain[]
+  isPartnerNode: boolean
 }
 
 export interface Chain {

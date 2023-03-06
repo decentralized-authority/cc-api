@@ -19,6 +19,8 @@ export const createAccountModel = (tableName: string) => dynogels.define('Accoun
     // @ts-ignore
     chainSalt: Joi.string(),
     // @ts-ignore
+    isPartner: Joi.boolean(), // indicates that this is a partner account, not a regular user account
+    // @ts-ignore
     agreeTos: Joi.boolean(),
     // @ts-ignore
     agreeTosDate: Joi.string(),
