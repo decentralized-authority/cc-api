@@ -184,8 +184,8 @@ export class DBUtils {
 
   updateNode(id: string, changes: {user?: string, chains?: NodeChain[]}): Promise<boolean> {
     const updateObj: any = {
-      id,
       ...changes,
+      id,
     };
     if(updateObj.chains)
       updateObj.chains = JSON.stringify(updateObj.chains);
