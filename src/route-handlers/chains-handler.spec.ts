@@ -53,19 +53,20 @@ describe('ChainsHandler', function() {
       agreePrivacyPolicyDate: now,
       agreeCookies: true,
       agreeCookiesDate: now,
+      isPartner: false,
+      chains: [],
     };
-    await new Promise<void>((resolve, reject) => {
-      db.Accounts.create(account, (err) => {
-        if(err)
-          reject(err);
-        else {
-          resolve();
-        }
-      });
-    });
+    await dbUtils.createAccount(account);
     sampleChain = {
       id: '1234',
       name: 'Some Chain',
+      portalPrefix: 'some-prefix',
+      ticker: 'ABCDEFG',
+      description: 'some description',
+      blockchain: 'some blockchain',
+      allowance: 5,
+      enabled: true,
+      isPartnerChain: false,
     };
     await dbUtils.createChain(sampleChain);
     goodSessionToken = {
@@ -198,14 +199,7 @@ describe('ChainsHandler', function() {
         });
     }
     if(account)
-      await new Promise<void>((resolve, reject) => {
-        db.Accounts.destroy({id: account.id}, err => {
-          if(err)
-            reject(err);
-          else
-            resolve();
-        });
-      });
+      await dbUtils.deleteAccount(account.id);
     await dbUtils.deleteChain(sampleChain.id);
   });
 });

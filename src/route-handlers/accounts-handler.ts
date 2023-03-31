@@ -1,7 +1,7 @@
 import { DB } from '../db';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import {
-  checkRecaptcha,
+  checkRecaptcha, generateChainUrl,
   getAccountFromToken,
   goodBody, goodEmail, goodPassword,
   hashPassword,
@@ -19,6 +19,8 @@ import bindAll from 'lodash/bindAll';
 import { SessionToken } from './root-handler';
 import { PoktUtils } from '../pokt-utils';
 import { EncryptionManager } from '../encryption-manager';
+import { ChainUrl } from '../interfaces';
+import isArray from 'lodash/isArray';
 
 export interface Account {
   id: string
@@ -34,6 +36,7 @@ export interface Account {
   agreePrivacyPolicyDate: string,
   agreeCookies: boolean,
   agreeCookiesDate: string,
+  chains: ChainUrl[],
 }
 
 export interface AccountDeletePostBody {
@@ -52,6 +55,13 @@ export interface UpdateEmailPostBody {
 
 export interface PrivateKeyPostBody {
   password: string
+}
+
+export interface AccountAddChainPostBody {
+  id: string
+}
+export interface AccountUpdateChainsPostBody {
+  chains: string[]
 }
 
 export class AccountsHandler extends RouteHandler {
@@ -76,6 +86,9 @@ export class AccountsHandler extends RouteHandler {
       'postAccountDelete',
       'getAccountBalance',
       'postAccountPrivateKey',
+      'postAccountAddChain',
+      'postAccountRemoveChain',
+      'postAccountUpdateChains',
     ]);
   }
 
@@ -160,14 +173,7 @@ export class AccountsHandler extends RouteHandler {
     const hashed = hashPassword(password, account?.salt);
     if(hashed !== account?.passwordHash)
       return response403('Invalid password');
-    await new Promise<void>((resolve, reject) => {
-      this._db.Accounts.destroy({id: account.id}, err => {
-        if(err)
-          reject(err);
-        else
-          resolve();
-      });
-    });
+    await this._dbUtils.deleteAccount(account.id);
     const sessionTokens = await new Promise<SessionToken[]>((resolve, reject) => {
       this._db.SessionTokens
         .scan()
@@ -224,6 +230,81 @@ export class AccountsHandler extends RouteHandler {
       return httpErrorResponse(500, 'Internal server error');
     const privateKey = this._encryptionManager.decrypt(poktAccount.privateKeyEncrypted);
     return httpResponse(200, privateKey);
+  }
+
+  async postAccountAddChain(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+    const { body, pathParameters } = event;
+    const [ errResponse, account ] = await getAccountFromToken(this._db, event, event.pathParameters?.id || '');
+    if(errResponse)
+      return errResponse;
+    if(!body || !goodBody(body, isPlainObject))
+      return httpErrorResponse(400, 'Invalid body');
+    const parsed = JSON.parse(body);
+    let { id } = parsed as AccountAddChainPostBody;
+    if(!id || !isString(id))
+      return httpErrorResponse(400, 'Request must include a chain id string');
+    const chain = await this._dbUtils.getChain(id);
+    if(!chain)
+      return httpErrorResponse(400, 'Invalid chain id');
+    if((chain.isPartnerChain && !account?.isPartner) || !chain.enabled)
+      return httpErrorResponse(403);
+    const prev = account.chains.find(c => c.id === id);
+    if(prev)
+      return httpResponse(200, prev);
+    const newChain = {
+      id,
+      url: generateChainUrl(account, id),
+    };
+    const newChains = [
+      ...account.chains,
+      newChain,
+    ];
+      await this._dbUtils.updateAccount(account.id, {chains: newChains});
+    return httpResponse(200, newChain);
+  }
+
+  async postAccountRemoveChain(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+    const { body, pathParameters } = event;
+    const [ errResponse, account ] = await getAccountFromToken(this._db, event, pathParameters?.id || '');
+    if(errResponse)
+      return errResponse;
+    if(!body || !goodBody(body, isPlainObject))
+      return httpErrorResponse(400, 'Invalid body');
+    const parsed = JSON.parse(body);
+    let { id } = parsed as AccountAddChainPostBody;
+    if(!id || !isString(id))
+      return httpErrorResponse(400, 'Request must include a chain id string');
+    const newChains = account.chains
+      .filter((c) => c.id !== id);
+    await this._dbUtils.updateAccount(account.id, {chains: newChains});
+    return httpResponse(200, true);
+  }
+
+  async postAccountUpdateChains(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+    const { body, pathParameters } = event;
+    const [ errResponse, account ] = await getAccountFromToken(this._db, event, event.pathParameters?.id || '');
+    if(errResponse)
+      return errResponse;
+    if(!body || !goodBody(body, isPlainObject))
+      return httpErrorResponse(400, 'Invalid body');
+    const parsed = JSON.parse(body);
+    let { chains } = parsed as AccountUpdateChainsPostBody;
+    if(!chains || !isArray(chains))
+      return httpErrorResponse(400, 'Request must include a chains array of id string');
+    const newChains: ChainUrl[] = [];
+    for(const id of chains) {
+      if(!isString(id))
+        return httpErrorResponse(400, `Invalid chain ID ${id}`);
+      const chain = await this._dbUtils.getChain(id);
+      if(!chain)
+        return httpErrorResponse(400, `Invalid chain ID ${id}`);
+      newChains.push({
+        id,
+        url: generateChainUrl(account, id),
+      });
+    }
+    await this._dbUtils.updateAccount(account.id, {chains: newChains});
+    return httpResponse(200, newChains);
   }
 
 }

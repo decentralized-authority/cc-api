@@ -1,8 +1,9 @@
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DB } from './db';
 import {
+  AccountAddChainPostBody,
   AccountDeletePostBody,
-  AccountsHandler,
+  AccountsHandler, AccountUpdateChainsPostBody,
   PrivateKeyPostBody,
   UpdateEmailPostBody,
   UpdatePasswordPostBody
@@ -10,7 +11,7 @@ import {
 import formData from 'form-data';
 import Mailgun from 'mailgun.js';
 import { routes } from './constants';
-import { NodesAddChainPostBody, NodesHandler, NodesPostBody, NodeUpdateChainsPostBody } from './route-handlers/nodes-handler';
+import { NodesHandler, NodesPostBody } from './route-handlers/nodes-handler';
 import { ChainsHandler } from './route-handlers/chains-handler';
 import {
   InviteHandlerPostBody,
@@ -138,13 +139,13 @@ const postAccountDeleteBody: AccountDeletePostBody = {
 const postNodesBody: NodesPostBody = {
   address: '',
 };
-const postNodeAddChainBody: NodesAddChainPostBody = {
+const postAccountAddChainBody: AccountAddChainPostBody = {
   id: '',
 };
-const postNodeRemoveChainBody: NodesAddChainPostBody = {
+const postAccountRemoveChainBody: AccountAddChainPostBody = {
   id: '',
 };
-const postNodeUpdateChainsBody: NodeUpdateChainsPostBody = {
+const postAccountUpdateChainsBody: AccountUpdateChainsPostBody = {
   chains: [''],
 };
 const postProviderUnlockBody: ProviderUnlockPostBody = {
@@ -167,6 +168,9 @@ server
   .post(routes.ACCOUNT_UPDATE_PASSWORD, accountsHandler.postAccountUpdatePassword, true, postAccountUpdatePasswordBody)
   .post(routes.ACCOUNT_PRIVATE_KEY, accountsHandler.postAccountPrivateKey, true, postAccountPrivateKeyBody)
   .get(routes.ACCOUNT_BALANCE, accountsHandler.getAccountBalance, true, null)
+  .post(routes.ACCOUNT_ADD_CHAIN, accountsHandler.postAccountAddChain, true, postAccountAddChainBody)
+  .post(routes.ACCOUNT_REMOVE_CHAIN, accountsHandler.postAccountRemoveChain, true, postAccountRemoveChainBody)
+  .post(routes.ACCOUNT_UPDATE_CHAINS, accountsHandler.postAccountUpdateChains, true, postAccountUpdateChainsBody)
   .post(routes.ACCOUNT_DELETE, accountsHandler.postAccountDelete, true, postAccountDeleteBody)
   // chainsHandler routes
   .get(routes.CHAINS, chainsHandler.getChains, true, null)
@@ -176,16 +180,13 @@ server
   .post(routes.NODES, nodesHandler.postNodes, true, postNodesBody)
   .get(routes.NODE, nodesHandler.getNode, true, null)
   .post(routes.NODE_DELETE, nodesHandler.postNodeDelete, true, null)
-  .post(routes.NODE_ADD_CHAIN, nodesHandler.postNodeAddChain, true, postNodeAddChainBody)
-  .post(routes.NODE_REMOVE_CHAIN, nodesHandler.postNodeRemoveChain, true, postNodeRemoveChainBody)
-  .post(routes.NODE_UPDATE_CHAINS, nodesHandler.postNodeUpdateChains, true, postNodeUpdateChainsBody)
 
   .post(routes.PROVIDER_UNLOCK, providerHandler.postProviderUnlock, false, postProviderUnlockBody)
   .get(routes.PROVIDER, providerHandler.getProvider, true, null)
   .get(routes.PROVIDER_GATEWAYS, providerHandler.getProviderGateways, true, null)
   .get(routes.PROVIDER_GATEWAY, providerHandler.getProviderGateway, true, null)
   .get(routes.PROVIDER_GATEWAY_RPC_ENDPOINTS, providerHandler.getProviderGatewayRpcEndpoints, true, null)
-  .get(routes.PROVIDER_GATEWAY_NODES, providerHandler.getProviderGatewayNodes, true, null)
+  // .get(routes.PROVIDER_GATEWAY_NODES, providerHandler.getProviderGatewayNodes, true, null)
   .post(routes.PROVIDER_GATEWAY_ERROR_LOG, providerHandler.postProviderGatewayErrorLog, true, postLogsBody)
   .post(routes.PROVIDER_GATEWAY_INFO_LOG, providerHandler.postProviderGatewayInfoLog, true, postLogsBody)
   .post(routes.PROVIDER_GATEWAY_SERVER_NOTICE_LOG, providerHandler.postProviderGatewayServerNoticeLog, true, postLogsBody)

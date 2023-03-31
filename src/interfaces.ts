@@ -4,27 +4,33 @@ export interface Invitation {
   email: string
 }
 
-export interface NodeChain {
+export interface ChainUrl {
   id: string
   url: string
 }
 
 export interface GatewayNode {
   id: string
-  chains: NodeChain[]
+  chains: ChainUrl[]
 }
 
 export interface Node {
   id: string
   address: string
   user: string
-  chains: NodeChain[]
-  isPartnerNode: boolean
 }
 
 export interface Chain {
   id: string
   name: string
+  portalPrefix: string
+  ticker: string
+  description: string
+  blockchain: string
+  allowance: number
+  authRpcEndpoint?: string
+  enabled: boolean
+  isPartnerChain: boolean
 }
 
 export interface PoktAccount {

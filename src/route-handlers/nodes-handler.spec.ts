@@ -5,7 +5,7 @@ import { DB } from '../db';
 import { createPoktAccount, generateId, generateSalt, hashPassword } from '../util';
 import dayjs from 'dayjs';
 import { Account } from './accounts-handler';
-import { Node, NodeChain } from '../interfaces';
+import { Node } from '../interfaces';
 import { DBUtils } from '../db-utils';
 import { NodesHandler } from './nodes-handler';
 import { SessionToken } from './root-handler';
@@ -58,16 +58,9 @@ describe('NodesHandler', function() {
       agreePrivacyPolicyDate: now,
       agreeCookies: true,
       agreeCookiesDate: now,
+      chains: [],
     };
-    await new Promise<void>((resolve, reject) => {
-      db.Accounts.create(account, (err) => {
-        if(err)
-          reject(err);
-        else {
-          resolve();
-        }
-      });
-    });
+    await dbUtils.createAccount(account);
     goodSessionToken = {
       token: generateId(),
       user: account.id,
@@ -94,24 +87,18 @@ describe('NodesHandler', function() {
       id: generateId(),
       address: poktAccount0.address,
       user: account.id,
-      chains: [],
-      isPartnerNode: false,
     };
     const poktAccount1 = await createPoktAccount();
     node1 = {
       id: generateId(),
       address: poktAccount1.address,
       user: account.id,
-      chains: [],
-      isPartnerNode: false,
     };
     const poktAccount2 = await createPoktAccount();
     node2 = {
       id: generateId(),
       address: poktAccount2.address,
       user: account.id,
-      chains: [],
-      isPartnerNode: false,
     };
     await Promise.all([node0, node1, node2].map(n => dbUtils.createNode(n)));
   });
@@ -273,8 +260,6 @@ describe('NodesHandler', function() {
         id: generateId(),
         address: poktAccount.address,
         user: account.id,
-        chains: [],
-        isPartnerNode: false,
       };
       await dbUtils.createNode(nodeToDelete);
     });
@@ -283,7 +268,7 @@ describe('NodesHandler', function() {
       await runTokenTests(nodesHandler.postNodeDelete);
       {// Not found
         // @ts-ignore
-        const res = await nodesHandler.postNodeUpdateChains({
+        const res = await nodesHandler.postNodeDelete({
           resource: '',
           httpMethod: '',
           pathParameters: {address: 'somenonexistentnode'},
@@ -310,255 +295,6 @@ describe('NodesHandler', function() {
     });
   });
 
-  describe('.postNodeAddChain()', function() {
-
-    let nodeToTestChains: Node;
-
-    before(async function() {
-      const poktAccount = await createPoktAccount();
-      nodeToTestChains = {
-        id: generateId(),
-        address: poktAccount.address,
-        user: account.id,
-        chains: [],
-        isPartnerNode: false,
-      };
-      await dbUtils.createNode(nodeToTestChains);
-    });
-
-    it('should add a chain to a node', async function() {
-      await runTokenTests(nodesHandler.postNodeAddChain);
-      {// Not found
-        // @ts-ignore
-        const res = await nodesHandler.postNodeAddChain({
-          resource: '',
-          httpMethod: '',
-          pathParameters: {address: 'somenonexistentnode'},
-          headers: {'x-api-key': goodSessionToken.token},
-        });
-        res.should.be.an.Object();
-        res.statusCode.should.equal(404);
-        res.body.should.be.a.String();
-      }
-      { // Bad bodies
-        const badBodies = [
-          undefined,
-          2,
-          JSON.stringify('something'),
-          JSON.stringify({id: undefined}),
-          JSON.stringify({id: 2}),
-          JSON.stringify({id: generateId()}),
-        ];
-        for(const body of badBodies) {
-          // @ts-ignore
-          const res = await nodesHandler.postNodeAddChain({resource: '', httpMethod: '', pathParameters: {address: nodeToTestChains.address}, body, headers: {'x-api-key': goodSessionToken.token}});
-          res.should.be.an.Object();
-          res.statusCode.should.equal(400);
-          res.body.should.be.a.String();
-        }
-      }
-      { // Good token
-        const chains = await dbUtils.getChains();
-        const chain = chains[0];
-        // @ts-ignore
-        const res = await nodesHandler.postNodeAddChain({
-          resource: '',
-          httpMethod: '',
-          pathParameters: {address: nodeToTestChains.address},
-          body: JSON.stringify({id: chain.id}),
-          headers: {'x-api-key': goodSessionToken.token},
-        });
-        res.should.be.an.Object();
-        res.statusCode.should.equal(200);
-        res.body.should.be.a.String();
-        const parsed = JSON.parse(res.body);
-        parsed.id.should.equal(chain.id);
-        parsed.url.should.be.a.String();
-        const nodeFromDb = await dbUtils.getNodeByAddress(nodeToTestChains.address, goodSessionToken.user);
-        const { chains: chainsFromDb } = nodeFromDb || {};
-        // @ts-ignore
-        const idx = chainsFromDb.findIndex(c => c.id === chain.id);
-        idx.should.be.above(-1);
-        // @ts-ignore
-        chainsFromDb[idx].id.should.equal(chain.id);
-        // @ts-ignore
-        chainsFromDb[idx].url.should.equal(parsed.url);
-      }
-    });
-
-    after(async function() {
-      await dbUtils.deleteNode(nodeToTestChains.id);
-    });
-  });
-
-  describe('.postNodeRemoveChain()', function() {
-
-    let nodeToTestChains: Node;
-    let chain0: NodeChain = {id: generateId(), url: ''};
-    let chain1: NodeChain = {id: generateId(), url: ''};
-
-    before(async function() {
-      const poktAccount = await createPoktAccount();
-      nodeToTestChains = {
-        id: generateId(),
-        address: poktAccount.address,
-        user: account.id,
-        chains: [
-          chain0,
-          chain1,
-        ],
-        isPartnerNode: false,
-      };
-      await dbUtils.createNode(nodeToTestChains);
-    });
-
-    it('should remove a chain from a node', async function() {
-      await runTokenTests(nodesHandler.postNodeRemoveChain);
-      {// Not found
-        // @ts-ignore
-        const res = await nodesHandler.postNodeRemoveChain({
-          resource: '',
-          httpMethod: '',
-          pathParameters: {address: 'somenonexistentnode'},
-          headers: {'x-api-key': goodSessionToken.token},
-        });
-        res.should.be.an.Object();
-        res.statusCode.should.equal(404);
-        res.body.should.be.a.String();
-      }
-      { // Bad bodies
-        const badBodies = [
-          undefined,
-          2,
-          JSON.stringify({id: undefined}),
-          JSON.stringify({id: 2}),
-        ];
-        for(const body of badBodies) {
-          // @ts-ignore
-          const res = await nodesHandler.postNodeRemoveChain({resource: '', httpMethod: '', pathParameters: {address: nodeToTestChains.address}, body, headers: {'x-api-key': goodSessionToken.token}});
-          res.should.be.an.Object();
-          res.statusCode.should.equal(400);
-          res.body.should.be.a.String();
-        }
-      }
-      { // Good token
-        // @ts-ignore
-        const res = await nodesHandler.postNodeRemoveChain({
-          resource: '',
-          httpMethod: '',
-          pathParameters: {address: nodeToTestChains.address},
-          body: JSON.stringify({id: chain1.id}),
-          headers: {'x-api-key': goodSessionToken.token},
-        });
-        res.should.be.an.Object();
-        res.statusCode.should.equal(200);
-        res.body.should.be.a.String();
-        const parsed = JSON.parse(res.body);
-        parsed.should.equal(true);
-        const nodeFromDb = await dbUtils.getNodeByAddress(nodeToTestChains.address, goodSessionToken.user);
-        const { chains: chainsFromDb } = nodeFromDb || {};
-        // @ts-ignore
-        chainsFromDb.length.should.equal(1);
-        // @ts-ignore
-        chainsFromDb[0].id.should.equal(chain0.id);
-      }
-    });
-
-    after(async function() {
-      await dbUtils.deleteNode(nodeToTestChains.id);
-    });
-  });
-
-  describe('.postNodeUpdateChains()', function() {
-
-    let nodeToTestChains: Node;
-    let chain0: NodeChain = {id: generateId(), url: ''};
-    let chain1: NodeChain = {id: generateId(), url: ''};
-
-    before(async function() {
-      const poktAccount = await createPoktAccount();
-      nodeToTestChains = {
-        id: generateId(),
-        address: poktAccount.address,
-        user: account.id,
-        chains: [
-          chain0,
-          chain1,
-        ],
-        isPartnerNode: false,
-      };
-      await dbUtils.createNode(nodeToTestChains);
-    });
-
-    it('should update a chain\'s nodes', async function() {
-      await runTokenTests(nodesHandler.postNodeUpdateChains);
-      {// Not found
-        // @ts-ignore
-        const res = await nodesHandler.postNodeUpdateChains({
-          resource: '',
-          httpMethod: '',
-          pathParameters: {address: 'somenonexistentnode'},
-          headers: {'x-api-key': goodSessionToken.token},
-        });
-        res.should.be.an.Object();
-        res.statusCode.should.equal(404);
-        res.body.should.be.a.String();
-      }
-      { // Bad bodies
-        const badBodies = [
-          undefined,
-          2,
-          JSON.stringify('something'),
-          JSON.stringify({chains: undefined}),
-          JSON.stringify({chains: 2}),
-          JSON.stringify({chains: [generateId()]}),
-        ];
-        for(const body of badBodies) {
-          // @ts-ignore
-          const res = await nodesHandler.postNodeUpdateChains({resource: '', httpMethod: '', pathParameters: {address: nodeToTestChains.address}, body, headers: {'x-api-key': goodSessionToken.token}});
-          res.should.be.an.Object();
-          res.statusCode.should.equal(400);
-          res.body.should.be.a.String();
-        }
-      }
-      { // Good token
-        const chains = await dbUtils.getChains();
-        const chain = chains[0];
-        // @ts-ignore
-        const res = await nodesHandler.postNodeUpdateChains({
-          resource: '',
-          httpMethod: '',
-          pathParameters: {address: nodeToTestChains.address},
-          body: JSON.stringify({chains: [chain.id]}),
-          headers: {'x-api-key': goodSessionToken.token},
-        });
-        res.should.be.an.Object();
-        res.statusCode.should.equal(200);
-        res.body.should.be.a.String();
-        const parsed = JSON.parse(res.body);
-        parsed.should.be.an.Array();
-        parsed.length.should.equal(1);
-        parsed[0].id.should.equal(chain.id);
-        parsed[0].url.should.be.a.String();
-        const nodeFromDb = await dbUtils.getNodeByAddress(nodeToTestChains.address, goodSessionToken.user);
-        const { chains: chainsFromDb } = nodeFromDb || {};
-        // @ts-ignore
-        chainsFromDb.length.should.equal(1);
-        // @ts-ignore
-        const idx = chainsFromDb.findIndex(c => c.id === chain.id);
-        idx.should.be.above(-1);
-        // @ts-ignore
-        chainsFromDb[idx].id.should.equal(chain.id);
-        // @ts-ignore
-        chainsFromDb[idx].url.should.equal(parsed[0].url);
-      }
-    });
-
-    after(async function() {
-      await dbUtils.deleteNode(nodeToTestChains.id);
-    });
-  });
-
   after(async function() {
     for(const sessionToken of [goodSessionToken, expiredSessionToken]) {
       if(sessionToken)
@@ -572,14 +308,7 @@ describe('NodesHandler', function() {
         });
     }
     if(account)
-      await new Promise<void>((resolve, reject) => {
-        db.Accounts.destroy({id: account.id}, err => {
-          if(err)
-            reject(err);
-          else
-            resolve();
-        });
-      });
+      await dbUtils.deleteAccount(account.id);
     await Promise.all([node0, node1, node2].map(n => dbUtils.deleteNode(n.id)));
   });
 

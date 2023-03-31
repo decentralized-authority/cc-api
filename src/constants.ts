@@ -13,12 +13,12 @@ export const routes = {
   ACCOUNT_DELETE: '/v1/accounts/{id}/delete',
   ACCOUNT_BALANCE: '/v1/accounts/{id}/balance',
   ACCOUNT_PRIVATE_KEY: '/v1/accounts/{id}/private-key',
+  ACCOUNT_ADD_CHAIN: '/v1/accounts/{id}/add-chain',
+  ACCOUNT_REMOVE_CHAIN: '/v1/accounts/{id}/remove-chain',
+  ACCOUNT_UPDATE_CHAINS: '/v1/accounts/{id}/update-chains',
 
   NODES: '/v1/nodes',
   NODE: '/v1/nodes/{address}',
-  NODE_ADD_CHAIN: '/v1/nodes/{address}/add-chain',
-  NODE_REMOVE_CHAIN: '/v1/nodes/{address}/remove-chain',
-  NODE_UPDATE_CHAINS: '/v1/nodes/{address}/update-chains',
   NODE_DELETE: '/v1/nodes/{address}/delete',
 
   CHAINS: '/v1/chains',

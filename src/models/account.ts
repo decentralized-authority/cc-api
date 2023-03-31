@@ -32,5 +32,7 @@ export const createAccountModel = (tableName: string) => dynogels.define('Accoun
     agreeCookies: Joi.boolean(),
     // @ts-ignore
     agreeCookiesDate: Joi.string(),
+    // @ts-ignore
+    chains: Joi.string(),
   },
 });

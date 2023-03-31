@@ -128,7 +128,7 @@ export class ProvidersHandler extends RouteHandler {
       'getProviderGateways',
       'getProviderGateway',
       'getProviderGatewayRpcEndpoints',
-      'getProviderGatewayNodes',
+      // 'getProviderGatewayNodes',
       'postProviderGatewayErrorLog',
       'postProviderGatewayInfoLog',
       'postProviderGatewayServerNoticeLog',
@@ -216,30 +216,30 @@ export class ProvidersHandler extends RouteHandler {
     return httpResponse(200, rpcEndpoints);
   }
 
-  async getProviderGatewayNodes(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-    const { body, pathParameters } = event;
-    // @ts-ignore
-    const { gatewayid: gatewayId, providerid: providerId } = pathParameters;
-    const [ errResponse, provider ] = await getProviderAccountFromToken(this._db, event, providerId);
-    if(errResponse)
-      return errResponse;
-    const gateway = await this._dbUtils.getGateway(gatewayId);
-    if(!gateway)
-      return httpErrorResponse(404, 'gateway not found');
-    if(gateway.provider !== provider.id)
-      return httpErrorResponse(403, 'Forbidden');
-    const rpcEndpoints = await this._dbUtils.getRpcEndpointsByGateway(gatewayId);
-    const chainIds = new Set(rpcEndpoints.map(rpcEndpoint => rpcEndpoint.chainId));
-    const nodes = await this._dbUtils.getNodes();
-    const filteredNodes: GatewayNode[] = nodes
-      .filter(node => node.chains.some(chain => chainIds.has(chain.id)))
-      .map(node => ({
-        id: node.id,
-        chains: node.chains
-          .filter(chain => chainIds.has(chain.id)),
-      }));
-    return httpResponse(200, filteredNodes);
-  }
+  // async getProviderGatewayNodes(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+  //   const { body, pathParameters } = event;
+  //   // @ts-ignore
+  //   const { gatewayid: gatewayId, providerid: providerId } = pathParameters;
+  //   const [ errResponse, provider ] = await getProviderAccountFromToken(this._db, event, providerId);
+  //   if(errResponse)
+  //     return errResponse;
+  //   const gateway = await this._dbUtils.getGateway(gatewayId);
+  //   if(!gateway)
+  //     return httpErrorResponse(404, 'gateway not found');
+  //   if(gateway.provider !== provider.id)
+  //     return httpErrorResponse(403, 'Forbidden');
+  //   const rpcEndpoints = await this._dbUtils.getRpcEndpointsByGateway(gatewayId);
+  //   const chainIds = new Set(rpcEndpoints.map(rpcEndpoint => rpcEndpoint.chainId));
+  //   const nodes = await this._dbUtils.getNodes();
+  //   const filteredNodes: GatewayNode[] = nodes
+  //     .filter(node => node.chains.some(chain => chainIds.has(chain.id)))
+  //     .map(node => ({
+  //       id: node.id,
+  //       chains: node.chains
+  //         .filter(chain => chainIds.has(chain.id)),
+  //     }));
+  //   return httpResponse(200, filteredNodes);
+  // }
 
   async postProviderGatewayErrorLog(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
     const { body, pathParameters } = event;
