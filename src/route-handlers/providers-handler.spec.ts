@@ -11,6 +11,7 @@ import { DBUtils } from '../db-utils';
 import { SessionToken } from './root-handler';
 import dayjs from 'dayjs';
 import { Node, RpcEndpoint } from '../interfaces';
+import { Account } from './accounts-handler';
 
 describe('ProvidersHandler', function() {
 
@@ -26,7 +27,7 @@ describe('ProvidersHandler', function() {
   let rpcEndpoints: RpcEndpoint[] = [];
   let otherRpcEndpoints: RpcEndpoint[] = [];
   let nodes: Node[] = [];
-  // let otherNodes: Node[] = [];
+  let users: Account[] = [];
 
   before(async function() {
     db = new DB(
@@ -96,21 +97,49 @@ describe('ProvidersHandler', function() {
       });
     }
     await Promise.all([...rpcEndpoints, ...otherRpcEndpoints].map(rpcEndpoint => dbUtils.createRpcEndpoint(rpcEndpoint)));
+
     for(let i = 0; i < rpcEndpoints.length; i++) {
       const poktAccount = await createPoktAccount();
       nodes.push({
         id: generateId(),
         address: poktAccount.address,
         user: generateId(),
-        // chains: [
-        //   {
-        //     id: rpcEndpoints[i].chainId,
-        //     url: `${generateId()}.test.com`,
-        //   },
-        // ],
       });
     }
     await Promise.all(nodes.map(node => dbUtils.createNode(node)));
+
+    for(let i = 0; i < 3; i++) {
+      const userPoktAccount = await createPoktAccount();
+      const now = dayjs().toISOString();
+      const salt = generateSalt();
+      const user: Account = {
+        id: generateId(),
+        email: `${generateId()}@email.com`,
+        salt,
+        passwordHash: hashPassword(generateId(), salt),
+        poktAddress: userPoktAccount.address,
+        chainSalt: generateSalt(),
+        isPartner: false,
+        agreeTos: true,
+        agreeTosDate: now,
+        agreePrivacyPolicy: true,
+        agreePrivacyPolicyDate: now,
+        agreeCookies: true,
+        agreeCookiesDate: now,
+        chains: [],
+      };
+      const userChains = [];
+      for(let i = 0; i < rpcEndpoints.length; i++) {
+        user.chains.push({
+          id: rpcEndpoints[i].chainId,
+          host: `${generateId()}.test.com`,
+        });
+      }
+      users.push(user);
+    }
+
+    await Promise.all(users.map((user) => dbUtils.createAccount(user)));
+
   });
 
   describe('.postProviderUnlock()', function() {
@@ -334,33 +363,47 @@ describe('ProvidersHandler', function() {
     });
   });
 
-  // describe('.getProviderGatewayNodes()', function() {
-  //   it('should get all nodes which should be served by the gateway', async function() {
-  //     { // Good user
-  //       const gateway = gateways[0];
-  //       // @ts-ignore
-  //       const res = await providersHandler.getProviderGatewayNodes({
-  //         resource: '',
-  //         httpMethod: '',
-  //         pathParameters: {
-  //           providerid: provider.id,
-  //           gatewayid: gateway.id,
-  //         },
-  //         headers: {'x-api-key': sessionToken.token}
-  //       });
-  //       res.should.be.an.Object();
-  //       res.statusCode.should.equal(200);
-  //       res.body.should.be.a.String();
-  //       const parsed = JSON.parse(res.body);
-  //       parsed.should.be.an.Array();
-  //       const chainIds = new Set(rpcEndpoints.map(r => r.chainId));
-  //       for(const node of parsed) {
-  //         node.should.be.an.Object();
-  //         node.chains.every((chain: any) => chainIds.has(chain.id)).should.be.True();
-  //       }
-  //     }
-  //   });
-  // });
+  describe('.getProviderGatewayHosts()', function() {
+    it('should get all hosts which should be served by the gateway', async function() {
+      { // Good user
+        const gateway = gateways[0];
+        // @ts-ignore
+        const res = await providersHandler.getProviderGatewayHosts({
+          resource: '',
+          httpMethod: '',
+          pathParameters: {
+            providerid: provider.id,
+            gatewayid: gateway.id,
+          },
+          headers: {'x-api-key': sessionToken.token}
+        });
+        res.should.be.an.Object();
+        res.statusCode.should.equal(200);
+        res.body.should.be.a.String();
+        const parsed = JSON.parse(res.body);
+        should(parsed).be.an.Array();
+        const chainIds = new Set(rpcEndpoints.map(r => r.chainId));
+        parsed.length.should.equal(rpcEndpoints.length);
+        const allHosts = new Set();
+        for(const user of users) {
+          const chains = user.chains || [];
+          for(const chain of chains) {
+            allHosts.add(chain.host);
+          }
+        }
+        for(const { id, hosts } of parsed) {
+          should(id).be.a.String();
+          chainIds.has(id).should.be.True();
+          should(hosts).be.an.Array();
+          hosts.length.should.be.greaterThan(0);
+          for(const host of hosts) {
+            should(host).be.a.String();
+            allHosts.has(host).should.be.True();
+          }
+        }
+      }
+    });
+  });
 
   describe('.postProviderGatewayLogError', function() {
     it('should log a gateway error', async function() {
@@ -455,6 +498,7 @@ describe('ProvidersHandler', function() {
     await Promise.all(gateways.map(gateway => dbUtils.deleteGateway(gateway.id)));
     await Promise.all([...rpcEndpoints, ...otherRpcEndpoints].map(rpcEndpoint => dbUtils.deleteRpcEndpoint(rpcEndpoint.id)));
     await Promise.all(nodes.map(node => dbUtils.deleteNode(node.id)));
+    await Promise.all(users.map((user) => dbUtils.deleteAccount(user.id)));
   });
 
 });

@@ -186,7 +186,7 @@ server
   .get(routes.PROVIDER_GATEWAYS, providerHandler.getProviderGateways, true, null)
   .get(routes.PROVIDER_GATEWAY, providerHandler.getProviderGateway, true, null)
   .get(routes.PROVIDER_GATEWAY_RPC_ENDPOINTS, providerHandler.getProviderGatewayRpcEndpoints, true, null)
-  // .get(routes.PROVIDER_GATEWAY_NODES, providerHandler.getProviderGatewayNodes, true, null)
+  .get(routes.PROVIDER_GATEWAY_HOSTS, providerHandler.getProviderGatewayHosts, true, null)
   .post(routes.PROVIDER_GATEWAY_ERROR_LOG, providerHandler.postProviderGatewayErrorLog, true, postLogsBody)
   .post(routes.PROVIDER_GATEWAY_INFO_LOG, providerHandler.postProviderGatewayInfoLog, true, postLogsBody)
   .post(routes.PROVIDER_GATEWAY_SERVER_NOTICE_LOG, providerHandler.postProviderGatewayServerNoticeLog, true, postLogsBody)
@@ -202,7 +202,7 @@ server
       routes.PROVIDER_GATEWAYS,
       routes.PROVIDER_GATEWAY,
       routes.PROVIDER_GATEWAY_RPC_ENDPOINTS,
-      routes.PROVIDER_GATEWAY_NODES,
+      routes.PROVIDER_GATEWAY_HOSTS,
       routes.PROVIDER_GATEWAY_ERROR_LOG,
       routes.PROVIDER_GATEWAY_INFO_LOG,
       routes.PROVIDER_GATEWAY_SERVER_NOTICE_LOG,

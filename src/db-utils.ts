@@ -1,5 +1,5 @@
 import { DB } from './db';
-import { Chain, Node, ChainUrl, PoktAccount, RpcEndpoint } from './interfaces';
+import { Chain, Node, ChainHost, PoktAccount, RpcEndpoint } from './interfaces';
 import { Gateway, Provider } from './route-handlers/providers-handler';
 import { SessionToken } from './route-handlers/root-handler';
 import { Account } from './route-handlers/accounts-handler';
@@ -10,6 +10,26 @@ export class DBUtils {
 
   constructor(db: DB) {
     this.db = db;
+  }
+
+  getAccounts(): Promise<Account[]> {
+    return new Promise<Account[]>((resolve, reject) => {
+      this.db.Accounts
+        .scan()
+        .loadAll()
+        .exec((err, { Items }) => {
+          if(err) {
+            reject(err);
+          } else {
+            resolve(Items.map((i: { attrs: any; }) => {
+              return {
+                ...i.attrs,
+                chains: JSON.parse(i.attrs.chains || '[]'),
+              };
+            }));
+          }
+        });
+    });
   }
 
   getAccount(id: string): Promise<Account|null> {
@@ -65,7 +85,7 @@ export class DBUtils {
     });
   }
 
-  updateAccount(id: string, changes: {chains?: ChainUrl[]}): Promise<boolean> {
+  updateAccount(id: string, changes: {chains?: ChainHost[]}): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
       const updates: any = {...changes};
       if(updates.chains)

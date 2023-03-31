@@ -19,7 +19,7 @@ import bindAll from 'lodash/bindAll';
 import { SessionToken } from './root-handler';
 import { PoktUtils } from '../pokt-utils';
 import { EncryptionManager } from '../encryption-manager';
-import { ChainUrl } from '../interfaces';
+import { ChainHost } from '../interfaces';
 import isArray from 'lodash/isArray';
 
 export interface Account {
@@ -36,7 +36,7 @@ export interface Account {
   agreePrivacyPolicyDate: string,
   agreeCookies: boolean,
   agreeCookiesDate: string,
-  chains: ChainUrl[],
+  chains: ChainHost[],
 }
 
 export interface AccountDeletePostBody {
@@ -253,7 +253,7 @@ export class AccountsHandler extends RouteHandler {
       return httpResponse(200, prev);
     const newChain = {
       id,
-      url: generateChainUrl(account, id),
+      host: generateChainUrl(account, id),
     };
     const newChains = [
       ...account.chains,
@@ -291,7 +291,7 @@ export class AccountsHandler extends RouteHandler {
     let { chains } = parsed as AccountUpdateChainsPostBody;
     if(!chains || !isArray(chains))
       return httpErrorResponse(400, 'Request must include a chains array of id string');
-    const newChains: ChainUrl[] = [];
+    const newChains: ChainHost[] = [];
     for(const id of chains) {
       if(!isString(id))
         return httpErrorResponse(400, `Invalid chain ID ${id}`);
@@ -300,7 +300,7 @@ export class AccountsHandler extends RouteHandler {
         return httpErrorResponse(400, `Invalid chain ID ${id}`);
       newChains.push({
         id,
-        url: generateChainUrl(account, id),
+        host: generateChainUrl(account, id),
       });
     }
     await this._dbUtils.updateAccount(account.id, {chains: newChains});

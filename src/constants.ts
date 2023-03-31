@@ -28,7 +28,7 @@ export const routes = {
   PROVIDER: '/v1/providers/{providerid}',
   PROVIDER_GATEWAYS: '/v1/providers/{providerid}/gateways',
   PROVIDER_GATEWAY: '/v1/providers/{providerid}/gateways/{gatewayid}',
-  PROVIDER_GATEWAY_NODES: '/v1/providers/{providerid}/gateways/{gatewayid}/nodes',
+  PROVIDER_GATEWAY_HOSTS: '/v1/providers/{providerid}/gateways/{gatewayid}/hosts',
   PROVIDER_GATEWAY_RPC_ENDPOINTS: '/v1/providers/{providerid}/gateways/{gatewayid}/rpc-endpoints',
   PROVIDER_GATEWAY_ERROR_LOG: '/v1/providers/{providerid}/gateways/{gatewayid}/error-log',
   PROVIDER_GATEWAY_INFO_LOG: '/v1/providers/{providerid}/gateways/{gatewayid}/info-log',

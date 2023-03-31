@@ -4,14 +4,14 @@ export interface Invitation {
   email: string
 }
 
-export interface ChainUrl {
+export interface ChainHost {
   id: string
-  url: string
+  host: string
 }
 
-export interface GatewayNode {
+export interface GatewayHosts {
   id: string
-  chains: ChainUrl[]
+  hosts: string[]
 }
 
 export interface Node {

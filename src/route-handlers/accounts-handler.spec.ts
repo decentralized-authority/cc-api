@@ -509,7 +509,7 @@ describe('AccountsHandler', function () {
         res.body.should.be.a.String();
         const parsed = JSON.parse(res.body);
         parsed.id.should.equal(chain?.id);
-        parsed.url.should.be.a.String();
+        parsed.host.should.be.a.String();
         const accountFromDb = await dbUtils.getAccount(account.id);
         const { chains: chainsFromDb } = accountFromDb || {};
         // @ts-ignore
@@ -518,7 +518,7 @@ describe('AccountsHandler', function () {
         // @ts-ignore
         chainsFromDb[idx].id.should.equal(chain.id);
         // @ts-ignore
-        chainsFromDb[idx].url.should.equal(parsed.url);
+        chainsFromDb[idx].host.should.equal(parsed.host);
       }
     });
   });
@@ -564,14 +564,14 @@ describe('AccountsHandler', function () {
         parsed.length.should.equal(chainsToAdd.length);
         for(let i = 0; i < parsed.length; i++) {
           parsed[i].id.should.equal(chainsToAdd[i].id);
-          parsed[i].url.should.be.a.String();
+          parsed[i].host.should.be.a.String();
         }
         const accountFromDb = await dbUtils.getAccount(account.id);
         const { chains: chainsFromDb } = accountFromDb as Account;
         chainsFromDb.length.should.equal(chainsToAdd.length);
         for(let i = 0; i < chainsFromDb.length; i++) {
           chainsFromDb[i].id.should.equal(chainsToAdd[i].id);
-          chainsFromDb[i].url.should.equal(parsed[i].url);
+          chainsFromDb[i].host.should.equal(parsed[i].host);
         }
       }
     });
