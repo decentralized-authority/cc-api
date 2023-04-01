@@ -2,7 +2,6 @@ import { DB } from '../db';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import {
   addressPatt,
-  generateChainUrl,
   generateId,
   getAccountFromToken,
   goodBody,
@@ -21,12 +20,6 @@ import { PoktUtils } from '../pokt-utils';
 export interface NodesPostBody {
   address: string
 }
-export interface NodesAddChainPostBody {
-  id: string
-}
-export interface NodeUpdateChainsPostBody {
-  chains: string[]
-}
 
 export class NodesHandler extends RouteHandler {
 
@@ -44,9 +37,6 @@ export class NodesHandler extends RouteHandler {
       'postNodes',
       'getNode',
       'postNodeDelete',
-      'postNodeAddChain',
-      'postNodeRemoveChain',
-      'postNodeUpdateChains',
     ]);
   }
 
@@ -86,8 +76,6 @@ export class NodesHandler extends RouteHandler {
       id: generateId(),
       address,
       user: account.id,
-      chains: [],
-      isPartnerNode: false,
     };
     await this._dbUtils.createNode(node);
     return httpResponse(200, node);
@@ -120,94 +108,6 @@ export class NodesHandler extends RouteHandler {
       return httpErrorResponse(404, 'Not found');
     await this._dbUtils.deleteNode(node.id);
     return httpResponse(200, true);
-  }
-
-  async postNodeAddChain(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-    const { body, pathParameters } = event;
-    const [ errResponse, account ] = await getAccountFromToken(this._db, event);
-    if(errResponse)
-      return errResponse;
-    // @ts-ignore
-    const { address } = pathParameters;
-    const node = await this._dbUtils.getNodeByAddress(address, account.id);
-    if(!node)
-      return httpErrorResponse(404, 'Not found');
-    if(!body || !goodBody(body, isPlainObject))
-      return httpErrorResponse(400, 'Invalid body');
-    const parsed = JSON.parse(body);
-    let { id } = parsed as NodesAddChainPostBody;
-    if(!id || !isString(id))
-      return httpErrorResponse(400, 'Request must include a chain id string');
-    const chain = await this._dbUtils.getChain(id);
-    if(!chain)
-      return httpErrorResponse(400, 'Invalid chain ID');
-    const prev = node.chains.find(c => c.id === id);
-    if(prev)
-      return httpResponse(200, prev);
-    const newChain = {
-      id,
-      url: generateChainUrl(account, node.address, id),
-    };
-    const newChains = [
-      ...node.chains,
-      newChain,
-    ];
-    await this._dbUtils.updateNode(node.id, {chains: newChains});
-    return httpResponse(200, newChain);
-  }
-
-  async postNodeRemoveChain(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-    const { body, pathParameters } = event;
-    const [ errResponse, account ] = await getAccountFromToken(this._db, event);
-    if(errResponse)
-      return errResponse;
-    // @ts-ignore
-    const { address } = pathParameters;
-    const node = await this._dbUtils.getNodeByAddress(address, account.id);
-    if(!node)
-      return httpErrorResponse(404, 'Not found');
-    if(!body || !goodBody(body, isPlainObject))
-      return httpErrorResponse(400, 'Invalid body');
-    const parsed = JSON.parse(body);
-    let { id } = parsed as NodesAddChainPostBody;
-    if(!id || !isString(id))
-      return httpErrorResponse(400, 'Request must include a chain id string');
-    const newChains = node.chains
-      .filter(c => c.id !== id);
-    await this._dbUtils.updateNode(node.id, {chains: newChains});
-    return httpResponse(200, true);
-  }
-
-  async postNodeUpdateChains(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
-    const { body, pathParameters } = event;
-    const [ errResponse, account ] = await getAccountFromToken(this._db, event);
-    if(errResponse)
-      return errResponse;
-    // @ts-ignore
-    const { address } = pathParameters;
-    const node = await this._dbUtils.getNodeByAddress(address, account.id);
-    if(!node)
-      return httpErrorResponse(404, 'Not found');
-    if(!body || !goodBody(body, isPlainObject))
-      return httpErrorResponse(400, 'Invalid body');
-    const parsed = JSON.parse(body);
-    let { chains } = parsed as NodeUpdateChainsPostBody;
-    if(!chains || !isArray(chains))
-      return httpErrorResponse(400, 'Request must include a chains array of id string');
-    const newChains = [];
-    for(const id of chains) {
-      if(!isString(id))
-        return httpErrorResponse(400, `Invalid chain ID ${id}`);
-      const chain = await this._dbUtils.getChain(id);
-      if(!chain)
-        return httpErrorResponse(400, `Invalid chain ID ${id}`);
-      newChains.push({
-        id,
-        url: generateChainUrl(account, node.address, id),
-      });
-    }
-    await this._dbUtils.updateNode(node.id, {chains: newChains});
-    return httpResponse(200, newChains);
   }
 
 }

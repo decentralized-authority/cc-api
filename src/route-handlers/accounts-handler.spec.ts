@@ -1,4 +1,4 @@
-import 'should';
+import should from 'should';
 import { DB } from '../db';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { Account, AccountsHandler } from './accounts-handler';
@@ -64,16 +64,10 @@ describe('AccountsHandler', function () {
       agreePrivacyPolicyDate: now,
       agreeCookies: true,
       agreeCookiesDate: now,
+      isPartner: false,
+      chains: [],
     };
-    await new Promise<void>((resolve, reject) => {
-      db.Accounts.create(account, (err) => {
-        if(err)
-          reject(err);
-        else {
-          resolve();
-        }
-      });
-    });
+    await dbUtils.createAccount(account);
     goodSessionToken = {
       token: generateId(),
       user: account.id,
@@ -280,17 +274,9 @@ describe('AccountsHandler', function () {
         res.body.should.be.a.String();
         const parsed = JSON.parse(res.body);
         parsed.should.equal(true);
-        const accountFromDb = await new Promise<Account>((resolve, reject) => {
-          db.Accounts.get(account.id, (err, item) => {
-            if(err) {
-              reject(err);
-            } else {
-              // @ts-ignore
-              resolve(item.attrs as Account);
-            }
-          });
-        });
-        accountFromDb.email.should.equal(newEmail);
+        const accountFromDb = await dbUtils.getAccount(account.id);
+        should(accountFromDb).not.be.Null();
+        should(accountFromDb?.email).equal(newEmail);
       }
     });
   });
@@ -457,18 +443,10 @@ describe('AccountsHandler', function () {
         res.body.should.be.a.String();
         const parsed = JSON.parse(res.body);
         parsed.should.equal(true);
-        const accountFromDb = await new Promise<Account>((resolve, reject) => {
-          db.Accounts.get(account.id, (err, item) => {
-            if(err) {
-              reject(err);
-            } else {
-              // @ts-ignore
-              resolve(item.attrs as Account);
-            }
-          });
-        });
+        const accountFromDb = await dbUtils.getAccount(account.id);
         const hashed = hashPassword(newPassword, account.salt);
-        accountFromDb.passwordHash.should.equal(hashed);
+        should(accountFromDb).not.be.Null();
+        should(accountFromDb?.passwordHash).equal(hashed);
       }
     });
   });
@@ -491,6 +469,154 @@ describe('AccountsHandler', function () {
         parsed.should.be.a.String();
         const balanceNum = Number(parsed);
         balanceNum.should.be.aboveOrEqual(0);
+      }
+    });
+  });
+
+  describe('.postAccountAddChain()', function() {
+    it('should add a chain to an account', async function() {
+      await runTokenTests(accountsHandler.postAccountAddChain);
+      { // Bad bodies
+        const badBodies = [
+          undefined,
+          2,
+          JSON.stringify('something'),
+          JSON.stringify({id: undefined}),
+          JSON.stringify({id: 2}),
+          JSON.stringify({id: generateId()}),
+        ];
+        for(const body of badBodies) {
+          // @ts-ignore
+          const res = await accountsHandler.postAccountAddChain({resource: '', httpMethod: '', pathParameters: {id: account.id}, body, headers: {'x-api-key': goodSessionToken.token}});
+          res.should.be.an.Object();
+          res.statusCode.should.equal(400);
+          res.body.should.be.a.String();
+        }
+      }
+      { // Good token
+        const chains = await dbUtils.getChains();
+        const chain = chains.find((c) => !c.isPartnerChain && c.enabled);
+        // @ts-ignore
+        const res = await accountsHandler.postAccountAddChain({
+          resource: '',
+          httpMethod: '',
+          pathParameters: {id: account.id},
+          body: JSON.stringify({id: chain?.id}),
+          headers: {'x-api-key': goodSessionToken.token},
+        });
+        res.should.be.an.Object();
+        res.statusCode.should.equal(200);
+        res.body.should.be.a.String();
+        const parsed = JSON.parse(res.body);
+        parsed.id.should.equal(chain?.id);
+        parsed.host.should.be.a.String();
+        const accountFromDb = await dbUtils.getAccount(account.id);
+        const { chains: chainsFromDb } = accountFromDb || {};
+        // @ts-ignore
+        const idx = chainsFromDb.findIndex(c => c.id === chain.id);
+        idx.should.be.above(-1);
+        // @ts-ignore
+        chainsFromDb[idx].id.should.equal(chain.id);
+        // @ts-ignore
+        chainsFromDb[idx].host.should.equal(parsed.host);
+      }
+    });
+  });
+
+  describe('.postNodeUpdateChains()', function() {
+    it('should update a chain\'s nodes', async function() {
+      await runTokenTests(accountsHandler.postAccountUpdateChains);
+      { // Bad bodies
+        const badBodies = [
+          undefined,
+          2,
+          JSON.stringify('something'),
+          JSON.stringify({chains: undefined}),
+          JSON.stringify({chains: 2}),
+          JSON.stringify({chains: [generateId()]}),
+        ];
+        for(const body of badBodies) {
+          // @ts-ignore
+          const res = await accountsHandler.postAccountUpdateChains({resource: '', httpMethod: '', pathParameters: {id: account.id}, body, headers: {'x-api-key': goodSessionToken.token}});
+          res.should.be.an.Object();
+          res.statusCode.should.equal(400);
+          res.body.should.be.a.String();
+        }
+      }
+      { // Good token
+        const chains = await dbUtils.getChains();
+        const chainsToAdd = chains
+          .filter((c) => !c.isPartnerChain && c.enabled)
+          .slice(-2);
+        // @ts-ignore
+        const res = await accountsHandler.postAccountUpdateChains({
+          resource: '',
+          httpMethod: '',
+          pathParameters: {id: account.id},
+          body: JSON.stringify({chains: chainsToAdd.map(c => c.id)}),
+          headers: {'x-api-key': goodSessionToken.token},
+        });
+        res.should.be.an.Object();
+        res.statusCode.should.equal(200);
+        res.body.should.be.a.String();
+        const parsed = JSON.parse(res.body);
+        parsed.should.be.an.Array();
+        parsed.length.should.equal(chainsToAdd.length);
+        for(let i = 0; i < parsed.length; i++) {
+          parsed[i].id.should.equal(chainsToAdd[i].id);
+          parsed[i].host.should.be.a.String();
+        }
+        const accountFromDb = await dbUtils.getAccount(account.id);
+        const { chains: chainsFromDb } = accountFromDb as Account;
+        chainsFromDb.length.should.equal(chainsToAdd.length);
+        for(let i = 0; i < chainsFromDb.length; i++) {
+          chainsFromDb[i].id.should.equal(chainsToAdd[i].id);
+          chainsFromDb[i].host.should.equal(parsed[i].host);
+        }
+      }
+    });
+  });
+
+  describe('.postAccountRemoveChain()', function() {
+    it('should remove a chain from an account', async function() {
+      await runTokenTests(accountsHandler.postAccountRemoveChain);
+      { // Bad bodies
+        const badBodies = [
+          undefined,
+          2,
+          JSON.stringify('something'),
+          JSON.stringify({id: undefined}),
+          JSON.stringify({id: 2}),
+        ];
+        for(const body of badBodies) {
+          // @ts-ignore
+          const res = await accountsHandler.postAccountRemoveChain({resource: '', httpMethod: '', pathParameters: {id: account.id}, body, headers: {'x-api-key': goodSessionToken.token}});
+          res.should.be.an.Object();
+          res.statusCode.should.equal(400);
+          res.body.should.be.a.String();
+        }
+      }
+      { // Good token
+        // @ts-ignore
+        const { chains } = await dbUtils.getAccount(account.id);
+        const chainToRemove = chains[0].id;
+        // @ts-ignore
+        const res = await accountsHandler.postAccountRemoveChain({
+          resource: '',
+          httpMethod: '',
+          pathParameters: {id: account.id},
+          body: JSON.stringify({id: chainToRemove}),
+          headers: {'x-api-key': goodSessionToken.token},
+        });
+        res.should.be.a.Object();
+        res.statusCode.should.equal(200);
+        res.body.should.be.a.String();
+        const parsed = JSON.parse(res.body);
+        parsed.should.be.a.Boolean();
+        const accountFromDb = await dbUtils.getAccount(account.id);
+        const { chains: chainsFromDb } = accountFromDb || {};
+        // @ts-ignore
+        chainsFromDb.some((c) => c.id === chainToRemove).should.be.False();
       }
     });
   });
@@ -521,15 +647,10 @@ describe('AccountsHandler', function () {
         agreeCookiesDate: now,
         agreePrivacyPolicy: true,
         agreePrivacyPolicyDate: now,
+        isPartner: false,
+        chains: [],
       };
-      await new Promise<void>((resolve, reject) => {
-        db.Accounts.create(accountToDelete, err => {
-          if(err)
-            reject(err);
-          else
-            resolve();
-        });
-      });
+      await dbUtils.createAccount(accountToDelete);
       sessionTokenToDelete0 = {
         token: generateId(),
         user: accountToDelete.id,
@@ -555,14 +676,12 @@ describe('AccountsHandler', function () {
         id: generateId(),
         address: poktAccount0.address,
         user: accountToDelete.id,
-        chains: [],
       };
       const poktAccount1 = await createPoktAccount();
       nodeToDelete1 = {
         id: generateId(),
         address: poktAccount1.address,
         user: accountToDelete.id,
-        chains: [],
       };
       await Promise.all([nodeToDelete0, nodeToDelete1].map(n => dbUtils.createNode(n)));
     });
@@ -661,14 +780,7 @@ describe('AccountsHandler', function () {
     }
     if(account) {
       await dbUtils.deletePoktAccount(account.poktAddress);
-      await new Promise<void>((resolve, reject) => {
-        db.Accounts.destroy({id: account.id}, err => {
-          if(err)
-            reject(err);
-          else
-            resolve();
-        });
-      });
+      await dbUtils.deleteAccount(account.id);
     }
   });
 

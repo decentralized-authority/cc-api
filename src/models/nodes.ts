@@ -12,14 +12,10 @@ export const createNodeModel = (tableName: string) => dynogels.define('Node', {
     // @ts-ignore
     id: Joi.string(),
     // @ts-ignore
-    address: Joi.string(), // will match id for partner nodes
+    address: Joi.string(),
     // @ts-ignore
     note: Joi.string(),
     // @ts-ignore
     user: Joi.string(),
-    // @ts-ignore
-    chains: Joi.string(),
-    // @ts-ignore
-    isPartnerNode: Joi.boolean(), // indicates that this is a partner node, not a POKT node
   },
 });

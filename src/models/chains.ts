@@ -24,5 +24,7 @@ export const createChainModel = (tableName: string) => dynogels.define('Chain', 
     authRpcEndpoint: Joi.string(),
     // @ts-ignore
     enabled: Joi.boolean(),
+    // @ts-ignore
+    isPartnerChain: Joi.boolean(),
   },
 });

@@ -1,7 +1,8 @@
 import { DB } from './db';
-import { Chain, Node, NodeChain, PoktAccount, RpcEndpoint } from './interfaces';
+import { Chain, Node, ChainHost, PoktAccount, RpcEndpoint } from './interfaces';
 import { Gateway, Provider } from './route-handlers/providers-handler';
 import { SessionToken } from './route-handlers/root-handler';
+import { Account } from './route-handlers/accounts-handler';
 
 export class DBUtils {
 
@@ -9,6 +10,107 @@ export class DBUtils {
 
   constructor(db: DB) {
     this.db = db;
+  }
+
+  getAccounts(): Promise<Account[]> {
+    return new Promise<Account[]>((resolve, reject) => {
+      this.db.Accounts
+        .scan()
+        .loadAll()
+        .exec((err, { Items }) => {
+          if(err) {
+            reject(err);
+          } else {
+            resolve(Items.map((i: { attrs: any; }) => {
+              return {
+                ...i.attrs,
+                chains: JSON.parse(i.attrs.chains || '[]'),
+              };
+            }));
+          }
+        });
+    });
+  }
+
+  getAccount(id: string): Promise<Account|null> {
+    return new Promise<Account|null>((resolve, reject) => {
+      this.db.Accounts.get({id}, (err, res) => {
+        if(err) {
+          reject(err);
+        } else if(res) {
+          const { attrs } = res as any;
+          resolve({
+            ...attrs,
+            chains: JSON.parse(attrs.chains),
+          });
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  getAccountsByEmail(email: string): Promise<Account[]> {
+    return new Promise((resolve, reject) => {
+      this.db.Accounts
+        .scan()
+        .loadAll()
+        .where('email').equals(email)
+        .exec((err, { Items }) => {
+          if(err)
+            reject(err);
+          else
+            resolve(Items.map((item: {attrs: any}) => {
+              const { attrs } = item;
+              return {
+                ...attrs,
+                chains: JSON.parse(attrs.chains),
+              };
+            }));
+        });
+    });
+  }
+
+  createAccount(account: Account): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      this.db.Accounts.create({
+        ...account,
+        chains: JSON.stringify(account.chains),
+      }, err => {
+        if(err)
+          reject(err);
+        else
+          resolve(true);
+      });
+    });
+  }
+
+  updateAccount(id: string, changes: {chains?: ChainHost[]}): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      const updates: any = {...changes};
+      if(updates.chains)
+        updates.chains = JSON.stringify(updates.chains);
+      this.db.Accounts.update({
+        ...updates,
+        id,
+      }, err => {
+        if(err)
+          reject(err);
+        else
+          resolve(true);
+      });
+    });
+  }
+
+  deleteAccount(id: string): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      this.db.Accounts.destroy({id}, err => {
+        if(err)
+          reject(err);
+        else
+          resolve(true);
+      });
+    });
   }
 
   createSessionToken(sessionToken: SessionToken): Promise<boolean> {
@@ -95,11 +197,7 @@ export class DBUtils {
             reject(err);
           } else {
             resolve(Items.map((i: { attrs: any; }) => {
-              const item = i.attrs;
-              return {
-                ...item,
-                chains: JSON.parse(item.chains),
-              };
+              return i.attrs;
             }));
           }
         });
@@ -117,11 +215,7 @@ export class DBUtils {
           } else {
             const { Items } = res;
             resolve(Items.map((i: { attrs: any; }) => {
-              const item = i.attrs;
-              return {
-                ...item,
-                chains: JSON.parse(item.chains),
-              };
+              return i.attrs;
             }));
           }
         });
@@ -140,10 +234,7 @@ export class DBUtils {
           } else {
             const [ item ] = res.Items;
             if(item) {
-              resolve({
-                ...item.attrs,
-                chains: JSON.parse(item.attrs.chains),
-              });
+              resolve(item.attrs);
             } else {
               resolve(null);
             }
@@ -160,10 +251,7 @@ export class DBUtils {
         } else if(res) {
           // @ts-ignore
           const item = res.attrs;
-          resolve({
-            ...item,
-            chains: JSON.parse(item.chains),
-          });
+          resolve(item);
         } else {
           resolve(null);
         }
@@ -173,7 +261,7 @@ export class DBUtils {
 
   createNode(node: Node): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
-      this.db.Nodes.create({...node, chains: JSON.stringify(node.chains)}, err => {
+      this.db.Nodes.create(node, err => {
         if(err)
           reject(err);
         else
@@ -182,7 +270,7 @@ export class DBUtils {
     });
   }
 
-  updateNode(id: string, changes: {user?: string, chains?: NodeChain[]}): Promise<boolean> {
+  updateNode(id: string, changes: {user?: string}): Promise<boolean> {
     const updateObj: any = {
       ...changes,
       id,

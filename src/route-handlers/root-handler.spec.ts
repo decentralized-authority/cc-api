@@ -18,6 +18,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { EncryptionManager } from '../encryption-manager';
 import { PoktUtils } from '../pokt-utils';
+import { DBUtils } from '../db-utils';
 
 describe('RootHandler', function() {
 
@@ -25,6 +26,7 @@ describe('RootHandler', function() {
 
   let rootHandler: RootHandler;
   let db: DB;
+  let dbUtils: DBUtils;
   let poktUtils: PoktUtils;
   let account: Account;
   let goodSessionToken: SessionToken;
@@ -51,6 +53,7 @@ describe('RootHandler', function() {
       'ccRpcEndpoints-test',
     );
     await db.initialize();
+    dbUtils = new DBUtils(db);
     poktUtils = new PoktUtils(POKT_ENDPOINT || '');
     const encryptionManager = new EncryptionManager('someencryptionpassword');
     rootHandler = new RootHandler(db, mg, MAILGUN_DOMAIN, 'somerecaptchasecret', encryptionManager, poktUtils);
@@ -70,16 +73,10 @@ describe('RootHandler', function() {
       agreePrivacyPolicyDate: now,
       agreeCookies: true,
       agreeCookiesDate: now,
+      isPartner: false,
+      chains: [],
     };
-    await new Promise<void>((resolve, reject) => {
-      db.Accounts.create(account, (err) => {
-        if(err)
-          reject(err);
-        else {
-          resolve();
-        }
-      });
-    });
+    await dbUtils.createAccount(account);
     goodSessionToken = {
       token: generateId(),
       user: account.id,
@@ -165,16 +162,10 @@ describe('RootHandler', function() {
           agreePrivacyPolicyDate: now,
           agreeCookies: true,
           agreeCookiesDate: now,
+          isPartner: false,
+          chains: [],
         };
-        await new Promise<void>((resolve, reject) => {
-          db.Accounts.create(prevAccount, (err) => {
-            if(err)
-              reject(err);
-            else {
-              resolve();
-            }
-          });
-        });
+        await dbUtils.createAccount(prevAccount);
       }
     });
 
@@ -284,14 +275,7 @@ describe('RootHandler', function() {
         })));
       }
       if(prevAccount)
-        await new Promise<void>((resolve, reject) => {
-          db.Accounts.destroy({id: prevAccount.id}, err => {
-            if(err)
-              reject(err);
-            else
-              resolve();
-          });
-        });
+        await dbUtils.deleteAccount(prevAccount.id);
     });
   });
 
@@ -417,14 +401,7 @@ describe('RootHandler', function() {
         });
       }
       if(account)
-        await new Promise<void>((resolve, reject) => {
-          db.Accounts.destroy({id: account.id}, err => {
-            if(err)
-              reject(err);
-            else
-              resolve();
-          });
-        });
+        await dbUtils.deleteAccount(account.id);
       await new Promise<void>((resolve, reject) => {
         db.PoktAccounts.destroy({address: account.poktAddress}, err => {
           if(err)
@@ -484,16 +461,10 @@ describe('RootHandler', function() {
         agreePrivacyPolicyDate: now,
         agreeCookies: true,
         agreeCookiesDate: now,
+        isPartner: false,
+        chains: [],
       };
-      await new Promise<void>((resolve, reject) => {
-        db.Accounts.create(account, (err) => {
-          if(err)
-            reject(err);
-          else {
-            resolve();
-          }
-        });
-      });
+      await dbUtils.createAccount(account);
     });
 
     it('should generate a new session token', async function() {
@@ -572,14 +543,7 @@ describe('RootHandler', function() {
           });
         });
       if(account)
-        await new Promise<void>((resolve, reject) => {
-          db.Accounts.destroy({id: account.id}, err => {
-            if(err)
-              reject(err);
-            else
-              resolve();
-          });
-        });
+        await dbUtils.deleteAccount(account.id);
     });
   });
 
@@ -678,14 +642,7 @@ describe('RootHandler', function() {
         });
     }
     if(account)
-      await new Promise<void>((resolve, reject) => {
-        db.Accounts.destroy({id: account.id}, err => {
-          if(err)
-            reject(err);
-          else
-            resolve();
-        });
-      });
+      await dbUtils.deleteAccount(account.id);
   });
 
 });

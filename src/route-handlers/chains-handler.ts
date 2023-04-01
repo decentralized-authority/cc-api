@@ -1,8 +1,6 @@
 import { DB } from '../db';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
-import { getAccountFromToken, httpErrorResponse, httpResponse, response404 } from '../util';
-import { routes } from '../constants';
-import { Chain } from '../interfaces';
+import { getAccountFromToken, httpResponse, response403, response404 } from '../util';
 import { DBUtils } from '../db-utils';
 import { RouteHandler } from '../route-handler';
 import bindAll from 'lodash/bindAll';
@@ -27,7 +25,11 @@ export class ChainsHandler extends RouteHandler {
     const [ errResponse, account ] = await getAccountFromToken(this._db, event);
     if(errResponse)
       return errResponse;
-    const chains = await this._dbUtils.getChains();
+    let chains = await this._dbUtils.getChains();
+    const isPartner = account?.isPartner;
+    chains = chains
+      .filter((chain) => isPartner ? true : !chain.isPartnerChain)
+      .filter((chain) => chain.enabled);
     return httpResponse(200, chains);
   }
 
@@ -43,6 +45,8 @@ export class ChainsHandler extends RouteHandler {
     const chain = await this._dbUtils.getChain(id);
     if(!chain)
       return response404();
+    if((!account?.isPartner && chain.isPartnerChain) || !chain.enabled)
+      return response403();
     return httpResponse(200, chain);
   }
 

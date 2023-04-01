@@ -24,6 +24,7 @@ import { EncryptionManager } from '../encryption-manager';
 import bindAll from 'lodash/bindAll';
 import { PoktQueryNodeResponse, PoktUtils } from '../pokt-utils';
 import isArray from 'lodash/isArray';
+import { DBUtils } from '../db-utils';
 
 export interface InviteHandlerPostBody {
   email: string
@@ -57,6 +58,7 @@ export interface QueryPoktNodesPostBody {
 export class RootHandler extends RouteHandler {
 
   _db: DB;
+  _dbUtils: DBUtils;
   _mg: Client;
   _emailDomain: string;
   _recaptchaSecret: string;
@@ -66,6 +68,7 @@ export class RootHandler extends RouteHandler {
   constructor(db: DB, mg: Client, emailDomain: string, recaptchaSecret: string, encryptionManager: EncryptionManager, poktUtils: PoktUtils) {
     super();
     this._db = db;
+    this._dbUtils = new DBUtils(db);
     this._mg = mg;
     this._emailDomain = emailDomain;
     this._recaptchaSecret = recaptchaSecret;
@@ -241,15 +244,9 @@ export class RootHandler extends RouteHandler {
       agreeCookies,
       agreeCookiesDate: today,
       isPartner: false,
+      chains: [],
     };
-    await new Promise<void>((resolve, reject) => {
-      this._db.Accounts.create(account, err => {
-        if(err)
-          reject(err);
-        else
-          resolve();
-      });
-    });
+    await this._dbUtils.createAccount(account);
     return httpResponse(200, omit(account, ['salt', 'passwordHash', 'chainSalt']));
   }
 
@@ -264,18 +261,7 @@ export class RootHandler extends RouteHandler {
     email = email.trim().toLowerCase();
     if(!email || !goodEmail(email) || !goodPassword(password))
       return httpErrorResponse(400, 'valid email and password required');
-    const account = await new Promise<Account|undefined>((resolve, reject) => {
-      this._db.Accounts
-        .scan()
-        .loadAll()
-        .where('email').equals(email)
-        .exec((err, { Items }) => {
-          if(err)
-            reject(err);
-          else
-            resolve(Items[0]?.attrs);
-        });
-    });
+    const [ account ] = await this._dbUtils.getAccountsByEmail(email);
     if(!account)
       return httpErrorResponse(401, 'invalid account credentials');
     const passwordHash = hashPassword(password, account.salt);

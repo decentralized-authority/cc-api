@@ -9,6 +9,7 @@ import { Account } from './route-handlers/accounts-handler';
 import request from 'superagent';
 import { SessionToken } from './route-handlers/root-handler';
 import { Gateway, Provider } from './route-handlers/providers-handler';
+import { DBUtils } from './db-utils';
 
 export const timeout = (length = 0) => new Promise(resolve => setTimeout(resolve, length));
 
@@ -121,22 +122,14 @@ export const isValidSessionToken = async (db: DB, token: string): Promise<Sessio
 };
 
 export const getAccountFromToken = async (db: DB, event: APIGatewayProxyEvent, id?: string): Promise<[APIGatewayProxyResult, null]|[null, Account]> => {
+  const dbUtils = new DBUtils(db);
   const token = event.headers[SESSION_TOKEN_HEADER];
   if(!token)
     return [response403('Missing x-api-key header.'), null];
   const sessionToken = await isValidSessionToken(db, token);
   if(!sessionToken || (isString(id) && sessionToken.user !== id))
     return [response403('Invalid session token'), null];
-  const account: Account|null = await new Promise<any>((resolve, reject) => {
-    db.Accounts.get(sessionToken.user, (err, item) => {
-      if(err) {
-        reject(err);
-      } else {
-        // @ts-ignore
-        resolve(item ? item.attrs : null);
-      }
-    });
-  });
+  const account = await dbUtils.getAccount(sessionToken.user);
   if(!account)
     return [response404(), null];
   return [null, account];
@@ -175,9 +168,9 @@ export const checkRecaptcha = async function(recaptchaSecret: string, recaptchaT
 
 export const addressPatt = /^[0123456789abcdef]{40}$/i;
 
-export const generateChainUrl = (account: Account, nodeAddress: string, chainId: string): string => {
+export const generateChainUrl = (account: Account, chainId: string): string => {
   chainId = chainId.toLowerCase();
-  const hash = sha256(account.id + account.chainSalt + nodeAddress + chainId, 'utf8');
+  const hash = sha256(account.id + account.chainSalt + chainId, 'utf8');
   return `${hash.slice(0, 16)}.${chainId}.${process.env.CC_CHAINS_DOMAIN}`;
 };
 
