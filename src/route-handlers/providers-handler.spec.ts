@@ -40,6 +40,7 @@ describe('ProvidersHandler', function() {
       'ccProviders-test',
       'ccGateways-test',
       'ccRpcEndpoints-test',
+      'ccUserChainHosts-test',
     );
     await db.initialize();
     dbUtils = new DBUtils(db);

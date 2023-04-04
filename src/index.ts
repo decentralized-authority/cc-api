@@ -40,6 +40,7 @@ const {
   CC_PROVIDERS_TABLE_NAME = 'ccProviders-prod',
   CC_GATEWAYS_TABLE_NAME = 'ccGateways-prod',
   CC_RPC_ENDPOINTS_TABLE_NAME = 'ccRpcEndpoints-prod',
+  CC_USER_CHAIN_HOSTS_TABLE_NAME = 'ccUserChainHosts-prod',
   CC_CHAINS_DOMAIN = '',
   MAILGUN_KEY = '',
   MAILGUN_DOMAIN = '',
@@ -59,6 +60,7 @@ const toCheck: {[key: string]: string} = {
   CC_GATEWAYS_TABLE_NAME,
   CC_RPC_ENDPOINTS_TABLE_NAME,
   CC_CHAINS_DOMAIN,
+  CC_USER_CHAIN_HOSTS_TABLE_NAME,
   MAILGUN_KEY,
   MAILGUN_DOMAIN,
   RECAPTCHA_SECRET,
@@ -83,6 +85,7 @@ const db = new DB(
   CC_PROVIDERS_TABLE_NAME,
   CC_GATEWAYS_TABLE_NAME,
   CC_RPC_ENDPOINTS_TABLE_NAME,
+  CC_USER_CHAIN_HOSTS_TABLE_NAME,
 );
 // db.initialize()
 //   .then(() => {

@@ -8,6 +8,7 @@ import { createPoktAccountModel } from './models/pokt-account';
 import { createProviderModel } from './models/provider';
 import { createGatewayModel } from './models/gateway';
 import { createRpcEndpointModel } from './models/rpc-endpoint';
+import { createUserChainHostModel } from './models/user-chain-host';
 
 export class DB {
 
@@ -20,8 +21,9 @@ export class DB {
   Providers: Model;
   Gateways: Model;
   RpcEndpoints: Model;
+  UserChainHosts: Model;
 
-  constructor(accountsTableName: string, nodesTableName: string, chainsTableName: string, sessionTokensTableName: string, invitationsTableName: string, poktAccountsTableName: string, providersTableName: string, gatewaysTableName: string, rpcEndpointsTableName: string) {
+  constructor(accountsTableName: string, nodesTableName: string, chainsTableName: string, sessionTokensTableName: string, invitationsTableName: string, poktAccountsTableName: string, providersTableName: string, gatewaysTableName: string, rpcEndpointsTableName: string, userChainHostTableName: string) {
     this.Accounts = createAccountModel(accountsTableName);
     this.Nodes = createNodeModel(nodesTableName);
     this.Chains = createChainModel(chainsTableName);
@@ -31,6 +33,7 @@ export class DB {
     this.Providers = createProviderModel(providersTableName);
     this.Gateways = createGatewayModel(gatewaysTableName);
     this.RpcEndpoints = createRpcEndpointModel(rpcEndpointsTableName);
+    this.UserChainHosts = createUserChainHostModel(userChainHostTableName);
   }
 
   initialize(): Promise<void> {

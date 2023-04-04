@@ -1,5 +1,5 @@
 import { DB } from './db';
-import { Chain, Node, ChainHost, PoktAccount, RpcEndpoint } from './interfaces';
+import { Chain, Node, ChainHost, PoktAccount, RpcEndpoint, UserChainHost } from './interfaces';
 import { Gateway, Provider } from './route-handlers/providers-handler';
 import { SessionToken } from './route-handlers/root-handler';
 import { Account } from './route-handlers/accounts-handler';
@@ -461,6 +461,33 @@ export class DBUtils {
   deleteRpcEndpoint(id: string): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
       this.db.RpcEndpoints.destroy({id}, err => {
+        if(err)
+          reject(err);
+        else
+          resolve(true);
+      });
+    });
+  }
+
+  getUserChainHost(host: string): Promise<UserChainHost|null> {
+    return new Promise((resolve, reject) => {
+      this.db.UserChainHosts.get({host}, (err, res) => {
+        if(err) {
+          reject(err);
+        } else if(res) {
+          // @ts-ignore
+          const attrs = res.attrs as UserChainHost;
+          resolve(attrs);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  createUserChainHost(chainHost: UserChainHost): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      this.db.UserChainHosts.create(chainHost, err => {
         if(err)
           reject(err);
         else

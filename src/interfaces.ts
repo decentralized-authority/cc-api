@@ -48,3 +48,8 @@ export interface RpcEndpoint {
   port: number
   disabled: boolean
 }
+
+export interface UserChainHost {
+  host: string
+  user: string
+}

@@ -52,6 +52,7 @@ describe('RootHandler', function() {
       'ccProviders-test',
       'ccGateways-test',
       'ccRpcEndpoints-test',
+      'ccUserChainHosts-test',
     );
     await db.initialize();
     dbUtils = new DBUtils(db);
@@ -483,6 +484,7 @@ describe('RootHandler', function() {
         'ccProviders-test',
         'ccGateways-test',
         'ccRpcEndpoints-test',
+        'ccUserChainHosts-test',
       );
       await db.initialize();
       const encryptionManager = new EncryptionManager('someencryptionpassword');
