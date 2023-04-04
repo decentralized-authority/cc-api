@@ -6,7 +6,7 @@ import {
   checkRecaptcha, createPoktAccount,
   generateId,
   generateSalt, getAccountFromToken,
-  goodBody,
+  goodBody, goodDomain,
   goodEmail,
   goodPassword, hashPassword,
   httpErrorResponse,
@@ -33,6 +33,7 @@ export interface InviteHandlerPostBody {
 
 export interface RegisterHandlerPostBody {
   email: string
+  domain: string
   password: string
   invitation: string
   agreeTos: boolean,
@@ -172,9 +173,16 @@ export class RootHandler extends RouteHandler {
     if(!body || !goodBody(body, isPlainObject))
       return httpErrorResponse(400, 'Invalid body');
     const parsed = JSON.parse(body);
-    let { email, password, invitation, agreeTos, agreePrivacyPolicy, agreeCookies } = parsed as RegisterHandlerPostBody;
-    if(!isString(email) || !isString(password) || !isString(invitation))
-      return httpErrorResponse(400, 'email, password, and invitations strings required');
+    let { email, domain, password, invitation, agreeTos, agreePrivacyPolicy, agreeCookies } = parsed as RegisterHandlerPostBody;
+    if(!isString(email) || !isString(password) || !isString(invitation) || !isString(domain))
+      return httpErrorResponse(400, 'email, password, domain, and invitations strings required');
+    domain = domain.toLowerCase().trim();
+    if(!domain || !goodDomain(domain))
+      return httpErrorResponse(400, 'valid domain required');
+    const acounts = await this._dbUtils.getAccounts();
+    const domainRegistered = acounts.some((a) => a.domains.split(',').includes(domain));
+    if(domainRegistered)
+      return httpErrorResponse(400, 'unable to register domain');
     invitation = invitation.trim();
     if(!invitation)
       return httpErrorResponse(403, 'invitation required');
@@ -233,6 +241,7 @@ export class RootHandler extends RouteHandler {
     const account: Account = {
       id,
       email,
+      domains: domain,
       salt,
       passwordHash,
       poktAddress,

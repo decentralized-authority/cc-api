@@ -45,6 +45,7 @@ describe('ChainsHandler', function() {
       email: `${generateId()}@email.com`,
       salt,
       passwordHash: hashPassword(generateId(), salt),
+      domains: `${generateId()}.com`,
       poktAddress: poktAccount.address,
       chainSalt: generateSalt(),
       agreeTos: true,

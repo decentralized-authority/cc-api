@@ -31,6 +31,7 @@ describe('RootHandler', function() {
   let account: Account;
   let goodSessionToken: SessionToken;
   let expiredSessionToken: SessionToken;
+  let goodSessionToken1: SessionToken;
 
   const { MAILGUN_KEY, MAILGUN_DOMAIN, POKT_ENDPOINT } = process.env;
   if(!MAILGUN_KEY)
@@ -65,6 +66,7 @@ describe('RootHandler', function() {
       email: `${generateId()}@email.com`,
       salt,
       passwordHash: hashPassword(generateId(), salt),
+      domains: `${generateId()}.com`,
       poktAddress: poktAccount.address,
       chainSalt: generateSalt(),
       agreeTos: true,
@@ -154,6 +156,7 @@ describe('RootHandler', function() {
           email: alreadyRegisteredEmail,
           salt,
           passwordHash: hashPassword(password, salt),
+          domains: `${generateId()}.com`,
           poktAddress: poktAccount.address,
           chainSalt: generateSalt(),
           agreeTos: true,
@@ -286,6 +289,8 @@ describe('RootHandler', function() {
     let goodInvitation: Invitation;
     let expiredInvitation: Invitation;
     let account: Account;
+    const email1 = `${generateId()}@${generateId()}.com`;
+    let goodInvitation1: Invitation;
 
     before(async function() {
       goodInvitation = {
@@ -298,7 +303,12 @@ describe('RootHandler', function() {
         expiration: dayjs().subtract(1, 'day').toISOString(),
         email,
       };
-      for(const invitation of [goodInvitation, expiredInvitation]) {
+      goodInvitation1 = {
+        id: generateId(),
+        expiration: dayjs().add(1, 'day').toISOString(),
+        email: email1,
+      };
+      for(const invitation of [goodInvitation, expiredInvitation, goodInvitation1]) {
         await new Promise<void>((resolve, reject) => {
           db.Invitations.create(invitation, (err) => {
             if(err)
@@ -316,6 +326,7 @@ describe('RootHandler', function() {
         const expiredRegisterBody: RegisterHandlerPostBody = {
           email,
           password,
+          domain: `${generateId()}.com`,
           invitation: expiredInvitation.id,
           agreeTos: true,
           agreePrivacyPolicy: true,
@@ -331,6 +342,7 @@ describe('RootHandler', function() {
         const badInvitationRegisterBody: RegisterHandlerPostBody = {
           email,
           password,
+          domain: `${generateId()}.com`,
           invitation: 'non-existent invitation',
           agreeTos: true,
           agreePrivacyPolicy: true,
@@ -369,6 +381,7 @@ describe('RootHandler', function() {
         const goodRegisterBody: RegisterHandlerPostBody = {
           email,
           password,
+          domain: `${generateId()}.com`,
           invitation: goodInvitation.id,
           agreeTos: true,
           agreePrivacyPolicy: true,
@@ -385,10 +398,38 @@ describe('RootHandler', function() {
         account.email.should.be.a.String();
         account.poktAddress.should.be.a.String();
       }
+      { // bad domains
+        const badDomains = [
+          undefined,
+          '',
+          'notadomain',
+          '.com',            // incomplete
+          'abc%def.com',     // forbidden characters 0
+          'abc.def.com/',    // forbidden characters 1
+          'abc def.com',     // forbidden characters 2
+          'abc.com,def.com', // forbidden characters 3
+          account.domains,   // duplicate domain
+        ];
+        for(const domain of badDomains) {
+          // @ts-ignore
+          const registerBody: RegisterHandlerPostBody = {domain,
+            email: email1,
+            password,
+            invitation: goodInvitation1.id,
+            agreeTos: true,
+            agreePrivacyPolicy: true,
+            agreeCookies: true,
+          };
+          // @ts-ignore
+          const res = await rootHandler.postRegister({resource: '', httpMethod: '', body: JSON.stringify(registerBody)});
+          res.should.be.an.Object();
+          res.statusCode.should.equal(400);
+        }
+      }
     });
 
     after(async function() {
-      for(const invitation of [goodInvitation, expiredInvitation]) {
+      for(const invitation of [goodInvitation, expiredInvitation, goodInvitation1]) {
         if(!invitation)
           continue;
         await new Promise<void>((resolve, reject) => {
@@ -453,6 +494,7 @@ describe('RootHandler', function() {
         email,
         salt,
         passwordHash: hashPassword(password, salt),
+        domains: `${generateId()}.com`,
         poktAddress: '12345',
         chainSalt: generateSalt(),
         agreeTos: true,

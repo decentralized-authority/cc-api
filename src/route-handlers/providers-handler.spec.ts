@@ -117,6 +117,7 @@ describe('ProvidersHandler', function() {
         email: `${generateId()}@email.com`,
         salt,
         passwordHash: hashPassword(generateId(), salt),
+        domains: `${generateId()}.com`,
         poktAddress: userPoktAccount.address,
         chainSalt: generateSalt(),
         isPartner: false,

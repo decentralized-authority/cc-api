@@ -193,3 +193,7 @@ export const generateGateway = (providerId: string, region: string, address: str
   relayPort: 29999,
   discordWebhookUrl,
 });
+
+export const goodDomain = (domain: string): boolean => {
+  return /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/.test(domain);
+};

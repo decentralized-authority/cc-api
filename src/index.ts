@@ -110,6 +110,7 @@ const postInviteBody: InviteHandlerPostBody = {
 const postRegisterBody: RegisterHandlerPostBody = {
   email: '',
   password: '',
+  domain: '',
   invitation: '',
   agreeTos: true,
   agreePrivacyPolicy: true,

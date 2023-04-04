@@ -15,6 +15,8 @@ export const createAccountModel = (tableName: string) => dynogels.define('Accoun
     // @ts-ignore
     passwordHash: Joi.string(),
     // @ts-ignore
+    domains: Joi.string(),
+    // @ts-ignore
     poktAddress: Joi.string(),
     // @ts-ignore
     chainSalt: Joi.string(),

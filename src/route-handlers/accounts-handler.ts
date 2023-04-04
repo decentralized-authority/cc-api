@@ -27,6 +27,7 @@ export interface Account {
   email: string
   salt: string
   passwordHash: string
+  domains: string
   poktAddress: string
   chainSalt: string
   isPartner: boolean

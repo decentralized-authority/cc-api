@@ -16,6 +16,7 @@ import isArray from 'lodash/isArray';
 import { RouteHandler } from '../route-handler';
 import bindAll from 'lodash/bindAll';
 import { PoktUtils } from '../pokt-utils';
+import escapeRegExp from 'lodash/escapeRegExp';
 
 export interface NodesPostBody {
   address: string
@@ -70,6 +71,18 @@ export class NodesHandler extends RouteHandler {
       const queryNodeData = await this._poktUtils.getNode(address);
       if(!queryNodeData)
         return httpErrorResponse(400, `${address} must be a staked POKT node.`);
+      let { service_url: serviceUrl } = queryNodeData;
+      if(!serviceUrl)
+        return httpErrorResponse(500, `Unable to get node's service url.`);
+      serviceUrl = serviceUrl
+        .toLowerCase()
+        .replace(/\/$/, '')
+        .replace(/:\d+$/, '');
+      const domains = account.domains.split(',');
+      const domainPatts = domains.map((d) => new RegExp(`[./]${escapeRegExp(d)}$`));
+      const domainMatches = domainPatts.some((p) => p.test(serviceUrl));
+      if(!domainMatches)
+        return httpErrorResponse(400, `The node's service url must match or be a subdomain of one of the top level domains registered to your account.`);
     }
 
     const node: Node = {
