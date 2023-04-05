@@ -174,7 +174,10 @@ export class AccountsHandler extends RouteHandler {
     const hashed = hashPassword(password, account?.salt);
     if(hashed !== account?.passwordHash)
       return response403('Invalid password');
-    await this._dbUtils.deleteAccount(account.id);
+    // Delete user nodes
+    const nodes = await this._dbUtils.getNodesByUser(account.id);
+    await Promise.all(nodes.map(n => this._dbUtils.deleteNode(n.id)));
+    // Delete user session tokens
     const sessionTokens = await new Promise<SessionToken[]>((resolve, reject) => {
       this._db.SessionTokens
         .scan()
@@ -199,8 +202,8 @@ export class AccountsHandler extends RouteHandler {
         });
       });
     }));
-    const nodes = await this._dbUtils.getNodesByUser(account.id);
-    await Promise.all(nodes.map(n => this._dbUtils.deleteNode(n.id)));
+    // Delete user account
+    await this._dbUtils.deleteAccount(account.id);
     return httpResponse(200, true);
   }
 
