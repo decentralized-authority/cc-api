@@ -256,7 +256,7 @@ export class AccountsHandler extends RouteHandler {
       id,
       host: generateChainUrl(account, id),
     };
-    const prevHostChain = this._dbUtils.getUserChainHost(newChain.host);
+    const prevHostChain = await this._dbUtils.getUserChainHost(newChain.host);
     if(!prevHostChain)
       await this._dbUtils.createUserChainHost({
         host: newChain.host,
@@ -311,8 +311,8 @@ export class AccountsHandler extends RouteHandler {
       });
     }
     let prevUserChainHosts = await Promise.all(newChains.map(c => this._dbUtils.getUserChainHost(c.host)));
-    await Promise.all(newChains
-      .filter(c => !prevUserChainHosts.some((p) => p ? p.host === c.host : false))
+    const filteredNewChains = newChains.filter(c => !prevUserChainHosts.some((p) => p ? p.host === c.host : false));
+    await Promise.all(filteredNewChains
       .map(c => this._dbUtils.createUserChainHost({
         host: c.host,
         user: account.id,
