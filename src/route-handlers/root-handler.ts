@@ -25,6 +25,8 @@ import bindAll from 'lodash/bindAll';
 import { PoktQueryNodeResponse, PoktUtils } from '../pokt-utils';
 import isArray from 'lodash/isArray';
 import { DBUtils } from '../db-utils';
+import { SecretManager } from '../secret-manager';
+import { envVars, secretsKeys } from '../constants';
 
 export interface InviteHandlerPostBody {
   email: string
@@ -63,22 +65,22 @@ export class RootHandler extends RouteHandler {
   _mg: Client;
   _emailDomain: string;
   _recaptchaSecret: string;
-  _encryptionManager: EncryptionManager;
   _poktUtils: PoktUtils;
   _accountDeleteTimeout: number;
   _domainDeleteTimeout: number;
+  _secretManager: SecretManager;
 
-  constructor(db: DB, mg: Client, emailDomain: string, recaptchaSecret: string, encryptionManager: EncryptionManager, poktUtils: PoktUtils, accountDeleteTimeout: number, domainDeleteTimeout: number) {
+  constructor(db: DB, mg: Client, emailDomain: string, recaptchaSecret: string, poktUtils: PoktUtils, accountDeleteTimeout: number, domainDeleteTimeout: number, secretManager: SecretManager) {
     super();
     this._db = db;
     this._dbUtils = new DBUtils(db);
     this._mg = mg;
     this._emailDomain = emailDomain;
     this._recaptchaSecret = recaptchaSecret;
-    this._encryptionManager = encryptionManager;
     this._poktUtils = poktUtils;
     this._accountDeleteTimeout = accountDeleteTimeout;
     this._domainDeleteTimeout = domainDeleteTimeout;
+    this._secretManager = secretManager;
     bindAll(this, [
       'getVersion',
       'postInvite',
@@ -263,11 +265,20 @@ export class RootHandler extends RouteHandler {
     const passwordHash = hashPassword(password, salt);
     const chainSalt = generateSalt();
     const poktAccount = await createPoktAccount();
+    let encryptionManager: EncryptionManager;
+    if(process.env[envVars.POKT_ACCOUNT_PASS]) {
+      encryptionManager = new EncryptionManager(process.env[envVars.POKT_ACCOUNT_PASS] as string);
+    } else {
+      const { SecretString: poktAccountPass } = await this._secretManager.getSecret(secretsKeys.POKT_ACCOUNT_PASS);
+      if(!poktAccountPass)
+        return httpErrorResponse(500);
+      encryptionManager = new EncryptionManager(poktAccountPass);
+    }
     await new Promise<void>((resolve, reject) => {
       this._db.PoktAccounts.create({
         address: poktAccount.address,
         publicKey: poktAccount.publicKey,
-        privateKeyEncrypted: this._encryptionManager.encrypt(poktAccount.privateKey),
+        privateKeyEncrypted: encryptionManager.encrypt(poktAccount.privateKey),
       }, err => {
         if(err)
           reject(err);

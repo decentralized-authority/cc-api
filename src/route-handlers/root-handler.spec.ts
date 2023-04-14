@@ -19,6 +19,7 @@ import path from 'path';
 import { EncryptionManager } from '../encryption-manager';
 import { PoktUtils } from '../pokt-utils';
 import { DBUtils } from '../db-utils';
+import { SecretManager } from '../secret-manager';
 
 describe('RootHandler', function() {
 
@@ -62,7 +63,8 @@ describe('RootHandler', function() {
     dbUtils = new DBUtils(db);
     poktUtils = new PoktUtils(POKT_ENDPOINT || '');
     const encryptionManager = new EncryptionManager('someencryptionpassword');
-    rootHandler = new RootHandler(db, mg, MAILGUN_DOMAIN, 'somerecaptchasecret', encryptionManager, poktUtils, DEFAULT_ACCOUNT_DELETE_TIMEOUT, DEFAULT_DOMAIN_DELETE_TIMEOUT);
+    const secretManager = new SecretManager();
+    rootHandler = new RootHandler(db, mg, MAILGUN_DOMAIN, 'somerecaptchasecret', poktUtils, DEFAULT_ACCOUNT_DELETE_TIMEOUT, DEFAULT_DOMAIN_DELETE_TIMEOUT, secretManager);
     const poktAccount = await createPoktAccount();
     const now = dayjs().toISOString();
     const salt = generateSalt();
@@ -495,8 +497,8 @@ describe('RootHandler', function() {
         'ccDeletedUserDomains-test',
       );
       await db.initialize();
-      const encryptionManager = new EncryptionManager('someencryptionpassword');
-      rootHandler = new RootHandler(db, mg, MAILGUN_DOMAIN, 'somerecaptchasecret', encryptionManager, poktUtils, DEFAULT_ACCOUNT_DELETE_TIMEOUT, DEFAULT_DOMAIN_DELETE_TIMEOUT);
+      const secretManager = new SecretManager();
+      rootHandler = new RootHandler(db, mg, MAILGUN_DOMAIN, 'somerecaptchasecret', poktUtils, DEFAULT_ACCOUNT_DELETE_TIMEOUT, DEFAULT_DOMAIN_DELETE_TIMEOUT, secretManager);
 
       const now = dayjs().toISOString();
       account = {

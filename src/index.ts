@@ -14,7 +14,7 @@ import {
   DEFAULT_ACCOUNT_DELETE_TIMEOUT,
   DEFAULT_DOMAIN_DELETE_TIMEOUT,
   DEFAULT_NODE_DELETE_TIMEOUT,
-  routes
+  routes, secretsKeys
 } from './constants';
 import { NodesHandler, NodesPostBody } from './route-handlers/nodes-handler';
 import { ChainsHandler } from './route-handlers/chains-handler';
@@ -27,13 +27,13 @@ import {
 } from './route-handlers/root-handler';
 import { CCServer } from './cc-server';
 import { httpResponse } from './util';
-import { EncryptionManager } from './encryption-manager';
 import { PoktUtils } from './pokt-utils';
 import {
   ProviderGatewayErrorLogPostBody,
   ProvidersHandler,
   ProviderUnlockPostBody
 } from './route-handlers/providers-handler';
+import { SecretManager } from './secret-manager';
 
 const {
   CC_ACCOUNTS_TABLE_NAME = 'ccAccounts-prod',
@@ -60,6 +60,8 @@ const {
   POKT_ACCOUNT_PASS = '',
   POKT_ENDPOINT = '',
 } = process.env;
+
+const secretManager = new SecretManager();
 
 const accountDeleteTimeout = parseInt(CC_ACCOUNT_DELETE_TIMEOUT);
 const domainDeleteTimeout = parseInt(CC_DOMAIN_DELETE_TIMEOUT);
@@ -119,7 +121,6 @@ const db = new DB(
 //     console.error(err);
 //   });
 
-const encryptionManger = new EncryptionManager(POKT_ACCOUNT_PASS);
 const poktUtils = new PoktUtils(POKT_ENDPOINT);
 
 const rootHandler = new RootHandler(
@@ -127,12 +128,12 @@ const rootHandler = new RootHandler(
   mg,
   MAILGUN_DOMAIN,
   RECAPTCHA_SECRET,
-  encryptionManger,
   poktUtils,
   accountDeleteTimeout,
   domainDeleteTimeout,
+  secretManager,
 );
-const accountsHandler = new AccountsHandler(db, RECAPTCHA_SECRET, poktUtils, encryptionManger);
+const accountsHandler = new AccountsHandler(db, RECAPTCHA_SECRET, poktUtils, secretManager);
 const nodesHandler = new NodesHandler(db, poktUtils, nodeDeleteTimeout);
 const chainsHandler = new ChainsHandler(db);
 const providerHandler = new ProvidersHandler(db);

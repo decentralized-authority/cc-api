@@ -21,6 +21,8 @@ import { PoktUtils } from '../pokt-utils';
 import { EncryptionManager } from '../encryption-manager';
 import { ChainHost } from '../interfaces';
 import isArray from 'lodash/isArray';
+import { SecretManager } from '../secret-manager';
+import { envVars, secretsKeys } from '../constants';
 
 export interface Account {
   id: string
@@ -71,15 +73,15 @@ export class AccountsHandler extends RouteHandler {
   _dbUtils: DBUtils;
   _recaptchaSecret: string;
   _poktUtils: PoktUtils;
-  _encryptionManager: EncryptionManager;
+  _secretManager: SecretManager;
 
-  constructor(db: DB, recaptchaSecret: string, poktUtils: PoktUtils, encryptionManager: EncryptionManager) {
+  constructor(db: DB, recaptchaSecret: string, poktUtils: PoktUtils, secretManager: SecretManager) {
     super();
     this._db = db;
     this._dbUtils = new DBUtils(db);
     this._recaptchaSecret = recaptchaSecret;
     this._poktUtils = poktUtils;
-    this._encryptionManager = encryptionManager;
+    this._secretManager = secretManager;
     bindAll(this, [
       'getAccount',
       'postAccountUpdateEmail',
@@ -232,7 +234,16 @@ export class AccountsHandler extends RouteHandler {
     const poktAccount = await this._dbUtils.getPoktAccount(account.poktAddress);
     if(!poktAccount)
       return httpErrorResponse(500, 'Internal server error');
-    const privateKey = this._encryptionManager.decrypt(poktAccount.privateKeyEncrypted);
+    let encryptionManager: EncryptionManager;
+    if(process.env[envVars.POKT_ACCOUNT_PASS]) {
+      encryptionManager = new EncryptionManager(process.env[envVars.POKT_ACCOUNT_PASS] as string);
+    } else {
+      const { SecretString: poktAccountPass } = await this._secretManager.getSecret(secretsKeys.POKT_ACCOUNT_PASS);
+      if(!poktAccountPass)
+        return httpErrorResponse(500);
+      encryptionManager = new EncryptionManager(poktAccountPass);
+    }
+    const privateKey = encryptionManager.decrypt(poktAccount.privateKeyEncrypted);
     return httpResponse(200, privateKey);
   }
 

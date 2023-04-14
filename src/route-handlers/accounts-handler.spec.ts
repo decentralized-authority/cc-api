@@ -2,13 +2,15 @@ import should from 'should';
 import { DB } from '../db';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { Account, AccountsHandler } from './accounts-handler';
-import { createPoktAccount, generateId, generateSalt, hashPassword } from '../util';
+import { createPoktAccount, generateId, generateSalt, hashPassword, httpErrorResponse } from '../util';
 import dayjs from 'dayjs';
 import { Node } from '../interfaces';
 import { DBUtils } from '../db-utils';
 import { SessionToken } from './root-handler';
 import { PoktUtils } from '../pokt-utils';
+import { SecretManager } from '../secret-manager';
 import { EncryptionManager } from '../encryption-manager';
+import { envVars, secretsKeys } from '../constants';
 
 describe('AccountsHandler', function () {
 
@@ -45,10 +47,19 @@ describe('AccountsHandler', function () {
     await db.initialize();
     dbUtils = new DBUtils(db);
     const poktUtils = new PoktUtils(process.env.POKT_ENDPOINT || '');
-    const encryptionManager = new EncryptionManager('someencryptionpassword');
-    accountsHandler = new AccountsHandler(db, 'somerecaptchasecret', poktUtils, encryptionManager);
+    const secretManager = new SecretManager();
+    accountsHandler = new AccountsHandler(db, 'somerecaptchasecret', poktUtils, secretManager);
     const poktAccount = await createPoktAccount();
     const poktAccountPass = 'someencryptionpassword';
+    let encryptionManager: EncryptionManager;
+    if(process.env[envVars.POKT_ACCOUNT_PASS]) {
+      encryptionManager = new EncryptionManager(process.env[envVars.POKT_ACCOUNT_PASS] as string);
+    } else {
+      const { SecretString: poktAccountPass } = await secretManager.getSecret(secretsKeys.POKT_ACCOUNT_PASS);
+      if(!poktAccountPass)
+        return httpErrorResponse(500);
+      encryptionManager = new EncryptionManager(poktAccountPass);
+    }
     const privateKeyEncrypted = encryptionManager.encrypt(poktAccount.privateKey);
     await dbUtils.createPoktAccount({
       address: poktAccount.address,

@@ -42,3 +42,11 @@ export const SESSION_TOKEN_HEADER = 'x-api-key';
 export const DEFAULT_ACCOUNT_DELETE_TIMEOUT = 24; // 24 hours
 export const DEFAULT_DOMAIN_DELETE_TIMEOUT = 24 // 24 hours
 export const DEFAULT_NODE_DELETE_TIMEOUT = 24 // 24 hours
+
+export const envVars = {
+  POKT_ACCOUNT_PASS: 'POKT_ACCOUNT_PASS',
+};
+
+export const secretsKeys = {
+  POKT_ACCOUNT_PASS: 'CC_POKT_ACCOUNT_PASS',
+};
