@@ -1,5 +1,5 @@
 import 'should';
-import { routes } from '../constants';
+import { DEFAULT_NODE_DELETE_TIMEOUT, routes } from '../constants';
 import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DB } from '../db';
 import { createPoktAccount, generateId, generateSalt, hashPassword } from '../util';
@@ -38,10 +38,14 @@ describe('NodesHandler', function() {
       'ccGateways-test',
       'ccRpcEndpoints-test',
       'ccUserChainHosts-test',
+      'ccUserDomains-test',
+      'ccDeletedAccounts-test',
+      'ccDeletedNodes-test',
+      'ccDeletedUserDomains-test',
     );
     await db.initialize();
     dbUtils = new DBUtils(db);
-    nodesHandler = new NodesHandler(db, new PoktUtils(process.env.POKT_ENDPOINT || ''));
+    nodesHandler = new NodesHandler(db, new PoktUtils(process.env.POKT_ENDPOINT || ''), DEFAULT_NODE_DELETE_TIMEOUT);
     const poktAccount = await createPoktAccount();
     const now = dayjs().toISOString();
     const salt = generateSalt();
@@ -50,7 +54,7 @@ describe('NodesHandler', function() {
       email: `${generateId()}@email.com`,
       salt,
       passwordHash: hashPassword(generateId(), salt),
-      domains: `${generateId()}.com`,
+      domains: [`${generateId()}.com`],
       poktAddress: poktAccount.address,
       chainSalt: generateSalt(),
       isPartner: false,

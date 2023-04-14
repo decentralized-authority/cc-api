@@ -27,7 +27,7 @@ export interface Account {
   email: string
   salt: string
   passwordHash: string
-  domains: string
+  domains: string[]
   poktAddress: string
   chainSalt: string
   isPartner: boolean
@@ -264,6 +264,7 @@ export class AccountsHandler extends RouteHandler {
       await this._dbUtils.createUserChainHost({
         host: newChain.host,
         user: account.id,
+        chain: id,
       });
     const newChains = [
       ...account.chains,
@@ -319,6 +320,7 @@ export class AccountsHandler extends RouteHandler {
       .map(c => this._dbUtils.createUserChainHost({
         host: c.host,
         user: account.id,
+        chain: c.id,
       })));
     await this._dbUtils.updateAccount(account.id, {chains: newChains});
     return httpResponse(200, newChains);

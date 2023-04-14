@@ -34,6 +34,10 @@ describe('ChainsHandler', function() {
       'ccGateways-test',
       'ccRpcEndpoints-test',
       'ccUserChainHosts-test',
+      'ccUserDomains-test',
+      'ccDeletedAccounts-test',
+      'ccDeletedNodes-test',
+      'ccDeletedUserDomains-test',
     );
     await db.initialize();
     dbUtils = new DBUtils(db);
@@ -46,7 +50,7 @@ describe('ChainsHandler', function() {
       email: `${generateId()}@email.com`,
       salt,
       passwordHash: hashPassword(generateId(), salt),
-      domains: `${generateId()}.com`,
+      domains: [`${generateId()}.com`],
       poktAddress: poktAccount.address,
       chainSalt: generateSalt(),
       agreeTos: true,

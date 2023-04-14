@@ -10,7 +10,12 @@ import {
 } from './route-handlers/accounts-handler';
 import formData from 'form-data';
 import Mailgun from 'mailgun.js';
-import { routes } from './constants';
+import {
+  DEFAULT_ACCOUNT_DELETE_TIMEOUT,
+  DEFAULT_DOMAIN_DELETE_TIMEOUT,
+  DEFAULT_NODE_DELETE_TIMEOUT,
+  routes
+} from './constants';
 import { NodesHandler, NodesPostBody } from './route-handlers/nodes-handler';
 import { ChainsHandler } from './route-handlers/chains-handler';
 import {
@@ -41,13 +46,24 @@ const {
   CC_GATEWAYS_TABLE_NAME = 'ccGateways-prod',
   CC_RPC_ENDPOINTS_TABLE_NAME = 'ccRpcEndpoints-prod',
   CC_USER_CHAIN_HOSTS_TABLE_NAME = 'ccUserChainHosts-prod',
+  CC_USER_DOMAINS_TABLE_NAME = 'ccUserDomains-prod',
+  CC_DELETED_ACCOUNTS_TABLE_NAME = 'ccDeletedAccounts-prod',
+  CC_DELETED_NODES_TABLE_NAME = 'ccDeletedNodes-prod',
+  CC_DELETED_USER_DOMAINS_TABLE_NAME = 'ccDeletedUserDomains-prod',
   CC_CHAINS_DOMAIN = '',
+  CC_ACCOUNT_DELETE_TIMEOUT = DEFAULT_ACCOUNT_DELETE_TIMEOUT.toString(10),
+  CC_DOMAIN_DELETE_TIMEOUT = DEFAULT_DOMAIN_DELETE_TIMEOUT.toString(10),
+  CC_NODE_DELETE_TIMEOUT = DEFAULT_NODE_DELETE_TIMEOUT.toString(10),
   MAILGUN_KEY = '',
   MAILGUN_DOMAIN = '',
   RECAPTCHA_SECRET = '',
   POKT_ACCOUNT_PASS = '',
   POKT_ENDPOINT = '',
 } = process.env;
+
+const accountDeleteTimeout = parseInt(CC_ACCOUNT_DELETE_TIMEOUT);
+const domainDeleteTimeout = parseInt(CC_DOMAIN_DELETE_TIMEOUT);
+const nodeDeleteTimeout = parseInt(CC_NODE_DELETE_TIMEOUT);
 
 const toCheck: {[key: string]: string} = {
   CC_ACCOUNTS_TABLE_NAME,
@@ -61,6 +77,10 @@ const toCheck: {[key: string]: string} = {
   CC_RPC_ENDPOINTS_TABLE_NAME,
   CC_CHAINS_DOMAIN,
   CC_USER_CHAIN_HOSTS_TABLE_NAME,
+  CC_USER_DOMAINS_TABLE_NAME,
+  CC_DELETED_ACCOUNTS_TABLE_NAME,
+  CC_DELETED_NODES_TABLE_NAME,
+  CC_DELETED_USER_DOMAINS_TABLE_NAME,
   MAILGUN_KEY,
   MAILGUN_DOMAIN,
   RECAPTCHA_SECRET,
@@ -86,6 +106,10 @@ const db = new DB(
   CC_GATEWAYS_TABLE_NAME,
   CC_RPC_ENDPOINTS_TABLE_NAME,
   CC_USER_CHAIN_HOSTS_TABLE_NAME,
+  CC_USER_DOMAINS_TABLE_NAME,
+  CC_DELETED_ACCOUNTS_TABLE_NAME,
+  CC_DELETED_NODES_TABLE_NAME,
+  CC_DELETED_USER_DOMAINS_TABLE_NAME,
 );
 // db.initialize()
 //   .then(() => {
@@ -98,9 +122,18 @@ const db = new DB(
 const encryptionManger = new EncryptionManager(POKT_ACCOUNT_PASS);
 const poktUtils = new PoktUtils(POKT_ENDPOINT);
 
-const rootHandler = new RootHandler(db, mg, MAILGUN_DOMAIN, RECAPTCHA_SECRET, encryptionManger, poktUtils);
+const rootHandler = new RootHandler(
+  db,
+  mg,
+  MAILGUN_DOMAIN,
+  RECAPTCHA_SECRET,
+  encryptionManger,
+  poktUtils,
+  accountDeleteTimeout,
+  domainDeleteTimeout,
+);
 const accountsHandler = new AccountsHandler(db, RECAPTCHA_SECRET, poktUtils, encryptionManger);
-const nodesHandler = new NodesHandler(db, poktUtils);
+const nodesHandler = new NodesHandler(db, poktUtils, nodeDeleteTimeout);
 const chainsHandler = new ChainsHandler(db);
 const providerHandler = new ProvidersHandler(db);
 

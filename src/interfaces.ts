@@ -1,3 +1,5 @@
+import { Account } from 'aws-sdk';
+
 export interface Invitation {
   id: string
   expiration: string
@@ -52,4 +54,20 @@ export interface RpcEndpoint {
 export interface UserChainHost {
   host: string
   user: string
+  chain: string
+}
+
+export interface UserDomain {
+  user: string
+  domain: string
+}
+
+export interface DeletedAccount extends Account {
+  deletedAt: string
+}
+export interface DeletedUserDomain extends UserDomain {
+  deletedAt: string
+}
+export interface DeletedNode extends Node {
+  deletedAt: string
 }

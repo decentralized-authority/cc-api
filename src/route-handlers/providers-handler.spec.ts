@@ -15,7 +15,7 @@ import { Account } from './accounts-handler';
 
 describe('ProvidersHandler', function() {
 
-  this.timeout(30000);
+  this.timeout(60000);
 
   let providersHandler: ProvidersHandler;
   let db: DB;
@@ -41,6 +41,10 @@ describe('ProvidersHandler', function() {
       'ccGateways-test',
       'ccRpcEndpoints-test',
       'ccUserChainHosts-test',
+      'ccUserDomains-test',
+      'ccDeletedAccounts-test',
+      'ccDeletedNodes-test',
+      'ccDeletedUserDomains-test',
     );
     await db.initialize();
     dbUtils = new DBUtils(db);
@@ -118,7 +122,7 @@ describe('ProvidersHandler', function() {
         email: `${generateId()}@email.com`,
         salt,
         passwordHash: hashPassword(generateId(), salt),
-        domains: `${generateId()}.com`,
+        domains: [`${generateId()}.com`],
         poktAddress: userPoktAccount.address,
         chainSalt: generateSalt(),
         isPartner: false,

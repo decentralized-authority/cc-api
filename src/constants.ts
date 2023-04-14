@@ -38,3 +38,7 @@ export const routes = {
 };
 
 export const SESSION_TOKEN_HEADER = 'x-api-key';
+
+export const DEFAULT_ACCOUNT_DELETE_TIMEOUT = 24; // 24 hours
+export const DEFAULT_DOMAIN_DELETE_TIMEOUT = 24 // 24 hours
+export const DEFAULT_NODE_DELETE_TIMEOUT = 24 // 24 hours

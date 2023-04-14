@@ -13,7 +13,7 @@ import { createPoktAccount, generateId, generateSalt, hashPassword } from '../ut
 import dayjs from 'dayjs';
 import { Invitation } from '../interfaces';
 import { Account } from './accounts-handler';
-import { routes } from '../constants';
+import { DEFAULT_ACCOUNT_DELETE_TIMEOUT, DEFAULT_DOMAIN_DELETE_TIMEOUT, routes } from '../constants';
 import fs from 'fs-extra';
 import path from 'path';
 import { EncryptionManager } from '../encryption-manager';
@@ -53,12 +53,16 @@ describe('RootHandler', function() {
       'ccGateways-test',
       'ccRpcEndpoints-test',
       'ccUserChainHosts-test',
+      'ccUserDomains-test',
+      'ccDeletedAccounts-test',
+      'ccDeletedNodes-test',
+      'ccDeletedUserDomains-test',
     );
     await db.initialize();
     dbUtils = new DBUtils(db);
     poktUtils = new PoktUtils(POKT_ENDPOINT || '');
     const encryptionManager = new EncryptionManager('someencryptionpassword');
-    rootHandler = new RootHandler(db, mg, MAILGUN_DOMAIN, 'somerecaptchasecret', encryptionManager, poktUtils);
+    rootHandler = new RootHandler(db, mg, MAILGUN_DOMAIN, 'somerecaptchasecret', encryptionManager, poktUtils, DEFAULT_ACCOUNT_DELETE_TIMEOUT, DEFAULT_DOMAIN_DELETE_TIMEOUT);
     const poktAccount = await createPoktAccount();
     const now = dayjs().toISOString();
     const salt = generateSalt();
@@ -67,7 +71,7 @@ describe('RootHandler', function() {
       email: `${generateId()}@email.com`,
       salt,
       passwordHash: hashPassword(generateId(), salt),
-      domains: `${generateId()}.com`,
+      domains: [`${generateId()}.com`],
       poktAddress: poktAccount.address,
       chainSalt: generateSalt(),
       agreeTos: true,
@@ -157,7 +161,7 @@ describe('RootHandler', function() {
           email: alreadyRegisteredEmail,
           salt,
           passwordHash: hashPassword(password, salt),
-          domains: `${generateId()}.com`,
+          domains: [`${generateId()}.com`],
           poktAddress: poktAccount.address,
           chainSalt: generateSalt(),
           agreeTos: true,
@@ -485,10 +489,14 @@ describe('RootHandler', function() {
         'ccGateways-test',
         'ccRpcEndpoints-test',
         'ccUserChainHosts-test',
+        'ccUserDomains-test',
+        'ccDeletedAccounts-test',
+        'ccDeletedNodes-test',
+        'ccDeletedUserDomains-test',
       );
       await db.initialize();
       const encryptionManager = new EncryptionManager('someencryptionpassword');
-      rootHandler = new RootHandler(db, mg, MAILGUN_DOMAIN, 'somerecaptchasecret', encryptionManager, poktUtils);
+      rootHandler = new RootHandler(db, mg, MAILGUN_DOMAIN, 'somerecaptchasecret', encryptionManager, poktUtils, DEFAULT_ACCOUNT_DELETE_TIMEOUT, DEFAULT_DOMAIN_DELETE_TIMEOUT);
 
       const now = dayjs().toISOString();
       account = {
@@ -496,7 +504,7 @@ describe('RootHandler', function() {
         email,
         salt,
         passwordHash: hashPassword(password, salt),
-        domains: `${generateId()}.com`,
+        domains: [`${generateId()}.com`],
         poktAddress: '12345',
         chainSalt: generateSalt(),
         agreeTos: true,

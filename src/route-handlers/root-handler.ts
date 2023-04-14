@@ -10,11 +10,11 @@ import {
   goodEmail,
   goodPassword, hashPassword,
   httpErrorResponse,
-  httpResponse
+  httpResponse, sha256
 } from '../util';
 import isPlainObject from 'lodash/isPlainObject';
 import isString from 'lodash/isString';
-import { Invitation } from '../interfaces';
+import { DeletedAccount, Invitation } from '../interfaces';
 import dayjs from 'dayjs';
 import { Account } from './accounts-handler';
 import omit from 'lodash/omit';
@@ -65,8 +65,10 @@ export class RootHandler extends RouteHandler {
   _recaptchaSecret: string;
   _encryptionManager: EncryptionManager;
   _poktUtils: PoktUtils;
+  _accountDeleteTimeout: number;
+  _domainDeleteTimeout: number;
 
-  constructor(db: DB, mg: Client, emailDomain: string, recaptchaSecret: string, encryptionManager: EncryptionManager, poktUtils: PoktUtils) {
+  constructor(db: DB, mg: Client, emailDomain: string, recaptchaSecret: string, encryptionManager: EncryptionManager, poktUtils: PoktUtils, accountDeleteTimeout: number, domainDeleteTimeout: number) {
     super();
     this._db = db;
     this._dbUtils = new DBUtils(db);
@@ -75,6 +77,8 @@ export class RootHandler extends RouteHandler {
     this._recaptchaSecret = recaptchaSecret;
     this._encryptionManager = encryptionManager;
     this._poktUtils = poktUtils;
+    this._accountDeleteTimeout = accountDeleteTimeout;
+    this._domainDeleteTimeout = domainDeleteTimeout;
     bindAll(this, [
       'getVersion',
       'postInvite',
@@ -110,20 +114,45 @@ export class RootHandler extends RouteHandler {
     email = email.trim().toLowerCase();
     if(!email || !goodEmail(email))
       return httpErrorResponse(400, 'valid email required');
-    const prevInvitations = await new Promise<Invitation[]>((resolve, reject) => {
-      this._db.Invitations
-        .scan()
-        .loadAll()
-        .where('email').equals(email)
-        .exec((err, { Items }) => {
-          if(err) {
-            reject(err);
-          } else {
-            // @ts-ignore
-            resolve(Items.map(item => item.attrs));
-          }
+    const hashedEmail = sha256(email, 'utf8');
+    const [ prevInvitations, prevAccounts ]: [Invitation[], DeletedAccount[]] = await Promise.all([
+      new Promise<Invitation[]>((resolve, reject) => {
+        this._db.Invitations
+          .scan()
+          .loadAll()
+          .where('email').equals(email)
+          .exec((err, { Items }) => {
+            if(err) {
+              reject(err);
+            } else {
+              // @ts-ignore
+              resolve(Items.map(item => item.attrs));
+            }
+          });
+      }),
+      new Promise<DeletedAccount[]>((resolve, reject) => {
+        this._db.DeletedAccounts
+          .scan()
+          .loadAll()
+          .where('email').equals(hashedEmail)
+          .exec((err, { Items }: {Items: any[]}) => {
+            if(err) {
+              reject(err);
+            } else {
+              resolve(Items.map(item => item.attrs));
+            }
+          });
+      }),
+    ]);
+    if(prevAccounts.length > 0) {
+      const recent = prevAccounts
+        .find((a) => {
+          return dayjs().isBefore(dayjs(a.deletedAt).add(this._accountDeleteTimeout, 'hours'));
         });
-    });
+      if(recent) {
+        return httpErrorResponse(400, `An account with this email address has recently been deleted. You will need to wait until ${dayjs(recent.deletedAt).add(this._accountDeleteTimeout, 'hours').toISOString()} to request a new invitation.`);
+      }
+    }
     const now = dayjs();
     const validInvitations = prevInvitations
       .filter(i => dayjs(i.expiration).isAfter(now));
@@ -176,13 +205,6 @@ export class RootHandler extends RouteHandler {
     let { email, domain, password, invitation, agreeTos, agreePrivacyPolicy, agreeCookies } = parsed as RegisterHandlerPostBody;
     if(!isString(email) || !isString(password) || !isString(invitation) || !isString(domain))
       return httpErrorResponse(400, 'email, password, domain, and invitations strings required');
-    domain = domain.toLowerCase().trim();
-    if(!domain || !goodDomain(domain))
-      return httpErrorResponse(400, 'valid domain required');
-    const acounts = await this._dbUtils.getAccounts();
-    const domainRegistered = acounts.some((a) => a.domains.split(',').includes(domain));
-    if(domainRegistered)
-      return httpErrorResponse(400, 'unable to register domain');
     invitation = invitation.trim();
     if(!invitation)
       return httpErrorResponse(403, 'invitation required');
@@ -219,6 +241,23 @@ export class RootHandler extends RouteHandler {
     });
     if(emailExists)
       return httpErrorResponse(400, 'email already registered');
+    domain = domain.toLowerCase().trim();
+    if(!domain || !goodDomain(domain))
+      return httpErrorResponse(400, 'valid domain required');
+    const acounts = await this._dbUtils.getAccounts();
+    const domainRegistered = acounts.some((a) => a.domains.includes(domain));
+    if(domainRegistered)
+      return httpErrorResponse(400, 'unable to register domain');
+    const deletedDomains = await this._dbUtils.getDeletedUserDomainsByHashedDomain(sha256(domain, 'utf8'));
+    if(deletedDomains.length > 0) {
+      const recent = deletedDomains
+        .find((d) => {
+          return dayjs().isBefore(dayjs(d.deletedAt).add(this._domainDeleteTimeout, 'hours'));
+        });
+      if(recent) {
+        return httpErrorResponse(400, `This domain has recently been deleted. You will need to wait until ${dayjs(recent.deletedAt).add(this._domainDeleteTimeout, 'hours').toISOString()} to request a new invitation.`);
+      }
+    }
     const id = generateId();
     const salt = generateSalt();
     const passwordHash = hashPassword(password, salt);
@@ -241,7 +280,7 @@ export class RootHandler extends RouteHandler {
     const account: Account = {
       id,
       email,
-      domains: domain,
+      domains: [domain],
       salt,
       passwordHash,
       poktAddress,

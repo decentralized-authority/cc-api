@@ -6,9 +6,9 @@ import {
   getAccountFromToken,
   goodBody,
   httpErrorResponse,
-  httpResponse
+  httpResponse, sha256
 } from '../util';
-import { Node } from '../interfaces';
+import { DeletedNode, Node } from '../interfaces';
 import isPlainObject from 'lodash/isPlainObject';
 import isString from 'lodash/isString';
 import { DBUtils } from '../db-utils';
@@ -17,6 +17,7 @@ import { RouteHandler } from '../route-handler';
 import bindAll from 'lodash/bindAll';
 import { PoktUtils } from '../pokt-utils';
 import escapeRegExp from 'lodash/escapeRegExp';
+import dayjs from 'dayjs';
 
 export interface NodesPostBody {
   address: string
@@ -27,12 +28,14 @@ export class NodesHandler extends RouteHandler {
   _db: DB;
   _dbUtils: DBUtils;
   _poktUtils: PoktUtils;
+  _nodeDeleteTimeout: number;
 
-  constructor(db: DB, poktUtils: PoktUtils) {
+  constructor(db: DB, poktUtils: PoktUtils, nodeDeleteTimeout: number) {
     super();
     this._db = db;
     this._dbUtils = new DBUtils(db);
     this._poktUtils = poktUtils;
+    this._nodeDeleteTimeout = nodeDeleteTimeout;
     bindAll(this, [
       'getNodes',
       'postNodes',
@@ -63,10 +66,18 @@ export class NodesHandler extends RouteHandler {
     if(!isString(address) || !addressPatt.test(address))
       return httpErrorResponse(400, 'Invalid POKT address');
     address = address.toLowerCase();
-    const prevNode = await this._dbUtils.getNodeByAddress(address, account.id);
+    const [ prevNode, deletedNodes ]: [Node|null, DeletedNode[]] = await Promise.all([
+      this._dbUtils.getNodeByAddress(address, account.id),
+      this._dbUtils.getDeletedNodesByHashedAddress(sha256(address, 'utf8')),
+    ]);
     if(prevNode)
       return httpErrorResponse(400, 'Address already registered.');
-
+    if(deletedNodes.length > 0) {
+      const recent = deletedNodes
+        .find((d) => dayjs().isBefore(dayjs(d.deletedAt).add(this._nodeDeleteTimeout, 'hours')));
+      if(recent)
+        return httpErrorResponse(400, `Node with address ${address} was recently deleted. You will need to wait util ${dayjs(recent.deletedAt).add(this._nodeDeleteTimeout, 'hours').toISOString()} before you can register it again.`);
+    }
     if(process.env.NODE_ENV !== 'development') {
       const queryNodeData = await this._poktUtils.getNode(address);
       if(!queryNodeData)
@@ -78,8 +89,8 @@ export class NodesHandler extends RouteHandler {
         .toLowerCase()
         .replace(/\/$/, '')
         .replace(/:\d+$/, '');
-      const domains = account.domains.split(',');
-      const domainPatts = domains.map((d) => new RegExp(`[./]${escapeRegExp(d)}$`));
+      const domainPatts = account.domains
+        .map((d) => new RegExp(`[./]${escapeRegExp(d)}$`));
       const domainMatches = domainPatts.some((p) => p.test(serviceUrl));
       if(!domainMatches)
         return httpErrorResponse(400, `The node's service url must match or be a subdomain of one of the top level domains registered to your account.`);

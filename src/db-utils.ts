@@ -1,8 +1,20 @@
 import { DB } from './db';
-import { Chain, Node, ChainHost, PoktAccount, RpcEndpoint, UserChainHost } from './interfaces';
+import {
+  Chain,
+  Node,
+  ChainHost,
+  PoktAccount,
+  RpcEndpoint,
+  UserChainHost,
+  UserDomain,
+  DeletedUserDomain, DeletedNode
+} from './interfaces';
 import { Gateway, Provider } from './route-handlers/providers-handler';
 import { SessionToken } from './route-handlers/root-handler';
 import { Account } from './route-handlers/accounts-handler';
+import omit from 'lodash/omit';
+import uniq from 'lodash/uniq';
+import { sha256 } from './util';
 
 export class DBUtils {
 
@@ -12,46 +24,97 @@ export class DBUtils {
     this.db = db;
   }
 
-  getAccounts(): Promise<Account[]> {
-    return new Promise<Account[]>((resolve, reject) => {
-      this.db.Accounts
-        .scan()
-        .loadAll()
-        .exec((err, { Items }) => {
+  async getAccounts(): Promise<Account[]> {
+    const [ accounts, userDomains ]: [Account[], UserDomain[]] = await Promise.all([
+      new Promise<Account[]>((resolve, reject) => {
+        this.db.Accounts
+          .scan()
+          .loadAll()
+          .exec((err, {Items}) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(Items.map((i: { attrs: any; }) => {
+                return {
+                  ...i.attrs,
+                  chains: JSON.parse(i.attrs.chains || '[]'),
+                };
+              }));
+            }
+          });
+      }),
+      new Promise<UserDomain[]>((resolve, reject) => {
+        this.db.UserDomains
+          .scan()
+          .loadAll()
+          .exec((err, {Items}) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(Items.map((i: { attrs: any; }) => {
+                return i.attrs;
+              }));
+            }
+          });
+      }),
+    ]);
+    const userToDomains = userDomains.reduce((acc, userDomain) => {
+      const { user, domain } = userDomain;
+      if (!acc[user]) {
+        acc[user] = [];
+      }
+      acc[user].push(domain);
+      return acc;
+    }, {} as {[user: string]: string[]});
+    return accounts
+      .map((account) => {
+        return {
+          ...account,
+          domains: userToDomains[account.id] || [],
+        };
+      });
+  }
+
+  async getAccount(id: string): Promise<Account|null> {
+    const [ account, domains ]: [Account|null, string[]] = await Promise.all([
+      new Promise<Account|null>((resolve, reject) => {
+        this.db.Accounts.get({id}, (err, res) => {
           if(err) {
             reject(err);
+          } else if(res) {
+            const { attrs } = res as any;
+            resolve({
+              ...attrs,
+              chains: JSON.parse(attrs.chains),
+            });
           } else {
-            resolve(Items.map((i: { attrs: any; }) => {
-              return {
-                ...i.attrs,
-                chains: JSON.parse(i.attrs.chains || '[]'),
-              };
-            }));
+            resolve(null);
           }
         });
-    });
-  }
-
-  getAccount(id: string): Promise<Account|null> {
-    return new Promise<Account|null>((resolve, reject) => {
-      this.db.Accounts.get({id}, (err, res) => {
-        if(err) {
-          reject(err);
-        } else if(res) {
-          const { attrs } = res as any;
-          resolve({
-            ...attrs,
-            chains: JSON.parse(attrs.chains),
+      }),
+      new Promise<string[]>((resolve, reject) => {
+        this.db.UserDomains
+          .query(id)
+          .loadAll()
+          .exec((err, {Items}) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(Items.map((i: { attrs: any; }) => {
+                return i.attrs.domain;
+              }));
+            }
           });
-        } else {
-          resolve(null);
-        }
-      });
-    });
+      }),
+    ]);
+    return !account ? null : {
+      ...account,
+      domains,
+    };
   }
 
-  getAccountsByEmail(email: string): Promise<Account[]> {
-    return new Promise((resolve, reject) => {
+  async getAccountsByEmail(email: string): Promise<Account[]> {
+    const accounts: Account[] = await new Promise((resolve, reject) => {
       this.db.Accounts
         .scan()
         .loadAll()
@@ -69,20 +132,57 @@ export class DBUtils {
             }));
         });
     });
+    await Promise.all(accounts
+      .map((account, i) => {
+        return new Promise<void>((resolve, reject) => {
+          this.db.UserDomains
+            .query(account.id)
+            .loadAll()
+            .exec((err, {Items}) => {
+              if (err) {
+                reject(err);
+              } else {
+                accounts[i].domains = Items
+                  .map((i: { attrs: any; }) => {
+                    return i.attrs.domain;
+                  });
+                resolve();
+              }
+            });
+        });
+      }));
+    return accounts;
   }
 
-  createAccount(account: Account): Promise<boolean> {
-    return new Promise<boolean>((resolve, reject) => {
-      this.db.Accounts.create({
-        ...account,
-        chains: JSON.stringify(account.chains),
-      }, err => {
-        if(err)
-          reject(err);
-        else
-          resolve(true);
-      });
-    });
+  async createAccount(account: Account): Promise<boolean> {
+    const { domains } = account;
+    const [ success ] = await Promise.all([
+      new Promise<boolean>((resolve, reject) => {
+        this.db.Accounts.create({
+          ...omit(account, ['domains']),
+          chains: JSON.stringify(account.chains),
+        }, err => {
+          if(err)
+            reject(err);
+          else
+            resolve(true);
+        });
+      }),
+      ...uniq(domains).map((domain) => {
+        return new Promise<boolean>((resolve, reject) => {
+          this.db.UserDomains.create({
+            user: account.id,
+            domain,
+          }, err => {
+            if(err)
+              reject(err);
+            else
+              resolve(true);
+          });
+        });
+      }),
+    ]);
+    return success;
   }
 
   updateAccount(id: string, changes: {chains?: ChainHost[]}): Promise<boolean> {
@@ -102,15 +202,85 @@ export class DBUtils {
     });
   }
 
-  deleteAccount(id: string): Promise<boolean> {
-    return new Promise<boolean>((resolve, reject) => {
-      this.db.Accounts.destroy({id}, err => {
-        if(err)
-          reject(err);
-        else
-          resolve(true);
-      });
-    });
+  async deleteAccount(id: string): Promise<boolean> {
+    const [ account, domains ]: [Account|null, UserDomain[]] = await Promise.all([
+      new Promise<Account|null>((resolve, reject) => {
+        this.db.Accounts.get({id}, (err, res) => {
+          if(err) {
+            reject(err);
+          } else if(res) {
+            const { attrs } = res as any;
+            resolve(attrs);
+          } else {
+            resolve(null);
+          }
+        });
+      }),
+      new Promise<UserDomain[]>((resolve, reject) => {
+        this.db.UserDomains
+          .query(id)
+          .loadAll()
+          .exec((err, {Items}) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve(Items.map((i: { attrs: any; }) => {
+                return i.attrs;
+              }));
+            }
+          });
+      }),
+    ]);
+    if(!account)
+      return true;
+    const deletedAt = new Date().toISOString();
+    const [ success ] = await Promise.all([
+      new Promise<boolean>((resolve, reject) => {
+        this.db.Accounts.destroy({id}, err => {
+          if(err)
+            reject(err);
+          else
+            resolve(true);
+        });
+      }),
+      new Promise<boolean>((resolve, reject) => {
+        this.db.DeletedAccounts.create({
+          ...account,
+          email: sha256(account.email, 'utf8'),
+          deletedAt,
+        }, err => {
+          if(err)
+            reject(err);
+          else
+            resolve(true);
+        });
+      }),
+      // ...domains.map((domain) => {
+      //   return new Promise<boolean>((resolve, reject) => {
+      //     this.db.UserDomains.destroy(domain, err => {
+      //       if(err)
+      //         reject(err);
+      //       else
+      //         resolve(true);
+      //     });
+      //   });
+      // }),
+      ...domains.map((domain) => {
+        return new Promise<boolean>((resolve, reject) => {
+          this.db.DeletedUserDomains.create({
+            ...domain,
+            domain: sha256(domain.domain, 'utf8'),
+            deletedAt,
+          }, err => {
+            if(err)
+              reject(err);
+            else
+              resolve(true);
+          });
+        });
+      }),
+    ]);
+    return success;
   }
 
   createSessionToken(sessionToken: SessionToken): Promise<boolean> {
@@ -243,7 +413,7 @@ export class DBUtils {
     });
   }
 
-  getNodee(id: string): Promise<Node|null> {
+  getNode(id: string): Promise<Node|null> {
     return new Promise<Node|null>((resolve, reject) => {
       this.db.Nodes.get({id}, (err, res) => {
         if(err) {
@@ -287,15 +457,33 @@ export class DBUtils {
     });
   }
 
-  deleteNode(id: string): Promise<boolean> {
-    return new Promise<boolean>((resolve, reject) => {
-      this.db.Nodes.destroy({id}, err => {
-        if(err)
-          reject(err);
-        else
-          resolve(true);
-      });
-    });
+  async deleteNode(id: string): Promise<boolean> {
+    const node = await this.getNode(id);
+    if(!node)
+      return true;
+    const [ success ] = await Promise.all([
+      new Promise<boolean>((resolve, reject) => {
+        this.db.Nodes.destroy({id}, err => {
+          if(err)
+            reject(err);
+          else
+            resolve(true);
+        });
+      }),
+      new Promise<void>((resolve, reject) => {
+        this.db.DeletedNodes.create({
+          ...node,
+          address: sha256(node.address, 'utf8'),
+          deletedAt: new Date().toISOString(),
+        }, (err) => {
+          if(err)
+            reject(err);
+          else
+            resolve();
+        });
+      }),
+    ]);
+    return success;
   }
 
   getPoktAccount(address: string): Promise<PoktAccount|null> {
@@ -493,6 +681,38 @@ export class DBUtils {
         else
           resolve(true);
       });
+    });
+  }
+
+  getDeletedUserDomainsByHashedDomain(hashedDomain: string): Promise<DeletedUserDomain[]> {
+    return new Promise((resolve, reject) => {
+      this.db.DeletedUserDomains
+        .scan()
+        .loadAll()
+        .where('domain').equals(hashedDomain)
+        .exec((err, res: {Items: any[]}) => {
+          if(err) {
+            reject(err);
+          } else {
+            resolve(res.Items.map((i) => i.attrs));
+          }
+        });
+    });
+  }
+
+  getDeletedNodesByHashedAddress(hashedAddress: string): Promise<DeletedNode[]> {
+    return new Promise((resolve, reject) => {
+      this.db.DeletedNodes
+        .scan()
+        .loadAll()
+        .where('address').equals(hashedAddress)
+        .exec((err, res: {Items: any[]}) => {
+          if(err) {
+            reject(err);
+          } else {
+            resolve(res.Items.map((i) => i.attrs));
+          }
+        });
     });
   }
 

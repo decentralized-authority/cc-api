@@ -9,6 +9,10 @@ import { createProviderModel } from './models/provider';
 import { createGatewayModel } from './models/gateway';
 import { createRpcEndpointModel } from './models/rpc-endpoint';
 import { createUserChainHostModel } from './models/user-chain-host';
+import { createDeletedAccountModel } from './models/deleted-account';
+import { createDeletedNodeModel } from './models/deleted-nodes';
+import { createUserDomainModel } from './models/user-domain';
+import { createDeletedUserDomainModel } from './models/deleted-user-domain';
 
 export class DB {
 
@@ -22,8 +26,12 @@ export class DB {
   Gateways: Model;
   RpcEndpoints: Model;
   UserChainHosts: Model;
+  UserDomains: Model;
+  DeletedAccounts: Model;
+  DeletedNodes: Model;
+  DeletedUserDomains: Model;
 
-  constructor(accountsTableName: string, nodesTableName: string, chainsTableName: string, sessionTokensTableName: string, invitationsTableName: string, poktAccountsTableName: string, providersTableName: string, gatewaysTableName: string, rpcEndpointsTableName: string, userChainHostTableName: string) {
+  constructor(accountsTableName: string, nodesTableName: string, chainsTableName: string, sessionTokensTableName: string, invitationsTableName: string, poktAccountsTableName: string, providersTableName: string, gatewaysTableName: string, rpcEndpointsTableName: string, userChainHostTableName: string, userDomainTableName: string, deletedAccountsTableName: string, deletedNodesTableName: string, deletedUserDomainsTableName: string) {
     this.Accounts = createAccountModel(accountsTableName);
     this.Nodes = createNodeModel(nodesTableName);
     this.Chains = createChainModel(chainsTableName);
@@ -34,6 +42,10 @@ export class DB {
     this.Gateways = createGatewayModel(gatewaysTableName);
     this.RpcEndpoints = createRpcEndpointModel(rpcEndpointsTableName);
     this.UserChainHosts = createUserChainHostModel(userChainHostTableName);
+    this.UserDomains = createUserDomainModel(userDomainTableName);
+    this.DeletedAccounts = createDeletedAccountModel(deletedAccountsTableName);
+    this.DeletedNodes = createDeletedNodeModel(deletedNodesTableName);
+    this.DeletedUserDomains = createDeletedUserDomainModel(deletedUserDomainsTableName);
   }
 
   initialize(): Promise<void> {

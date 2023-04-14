@@ -37,6 +37,10 @@ describe('AccountsHandler', function () {
       'ccGateways-test',
       'ccRpcEndpoints-test',
       'ccUserChainHosts-test',
+      'ccUserDomains-test',
+      'ccDeletedAccounts-test',
+      'ccDeletedNodes-test',
+      'ccDeletedUserDomains-test',
     );
     await db.initialize();
     dbUtils = new DBUtils(db);
@@ -57,7 +61,7 @@ describe('AccountsHandler', function () {
       email,
       salt,
       passwordHash: hashPassword(password, salt),
-      domains: `${generateId()}.com`,
+      domains: [`${generateId()}.com`],
       poktAddress: poktAccount.address,
       chainSalt: generateSalt(),
       agreeTos: true,
@@ -641,7 +645,7 @@ describe('AccountsHandler', function () {
         salt,
         email: `${generateId()}@email.com`,
         passwordHash: hashPassword(password, salt),
-        domains: `${generateId()}.com`,
+        domains: [`${generateId()}.com`],
         poktAddress: poktAccount.address,
         chainSalt: generateSalt(),
         agreeTos: true,

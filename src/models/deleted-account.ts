@@ -1,7 +1,7 @@
 import dynogels from 'dynogels';
 import Joi from 'joi';
 
-export const createAccountModel = (tableName: string) => dynogels.define('Account', {
+export const createDeletedAccountModel = (tableName: string) => dynogels.define('DeletedAccount', {
   hashKey: 'id',
   tableName,
   timestamps: true,
@@ -9,7 +9,7 @@ export const createAccountModel = (tableName: string) => dynogels.define('Accoun
     // @ts-ignore
     id: Joi.string(),
     // @ts-ignore
-    email: Joi.string().email(),
+    email: Joi.string(),
     // @ts-ignore
     salt: Joi.string(),
     // @ts-ignore
@@ -34,5 +34,7 @@ export const createAccountModel = (tableName: string) => dynogels.define('Accoun
     agreeCookiesDate: Joi.string(),
     // @ts-ignore
     chains: Joi.string(),
+    // @ts-ignore
+    deletedAt: Joi.string(),
   },
 });

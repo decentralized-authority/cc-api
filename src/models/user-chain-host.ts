@@ -10,5 +10,7 @@ export const createUserChainHostModel = (tableName: string) => dynogels.define('
     host: Joi.string(),
     // @ts-ignore
     user: Joi.string(),
+    // @ts-ignore
+    chain: Joi.string(),
   },
 });
