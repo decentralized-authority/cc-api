@@ -11,6 +11,7 @@ import { PoktUtils } from '../pokt-utils';
 import { SecretManager } from '../secret-manager';
 import { EncryptionManager } from '../encryption-manager';
 import { envVars, secretsKeys } from '../constants';
+import { QueueManager } from '../queue-manager';
 
 describe('AccountsHandler', function () {
 
@@ -48,7 +49,8 @@ describe('AccountsHandler', function () {
     dbUtils = new DBUtils(db);
     const poktUtils = new PoktUtils(process.env.POKT_ENDPOINT || '');
     const secretManager = new SecretManager();
-    accountsHandler = new AccountsHandler(db, 'somerecaptchasecret', poktUtils, secretManager);
+    const qm = new QueueManager(process.env.CC_ROUTING_TABLES_CHANGE_QUEUE_URL || '');
+    accountsHandler = new AccountsHandler(db, 'somerecaptchasecret', poktUtils, secretManager, qm);
     const poktAccount = await createPoktAccount();
     const poktAccountPass = 'someencryptionpassword';
     let encryptionManager: EncryptionManager;

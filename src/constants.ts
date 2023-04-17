@@ -50,3 +50,10 @@ export const envVars = {
 export const secretsKeys = {
   POKT_ACCOUNT_PASS: 'CC_POKT_ACCOUNT_PASS',
 };
+
+export const routingChangeType = {
+  ADD_CHAIN: 'ADD_CHAIN',
+  REMOVE_CHAIN: 'REMOVE_CHAIN',
+  UPDATE_CHAINS: 'UPDATE_CHAINS',
+  DELETE_ACCOUNT: 'DELETE_ACCOUNT',
+};

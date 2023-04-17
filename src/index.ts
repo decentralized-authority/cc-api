@@ -26,7 +26,7 @@ import {
   UnlockHandlerPostBody
 } from './route-handlers/root-handler';
 import { CCServer } from './cc-server';
-import { httpResponse } from './util';
+import { httpResponse, timeout } from './util';
 import { PoktUtils } from './pokt-utils';
 import {
   ProviderGatewayErrorLogPostBody,
@@ -34,6 +34,7 @@ import {
   ProviderUnlockPostBody
 } from './route-handlers/providers-handler';
 import { SecretManager } from './secret-manager';
+import { QueueManager } from './queue-manager';
 
 const {
   CC_ACCOUNTS_TABLE_NAME = 'ccAccounts-prod',
@@ -54,6 +55,7 @@ const {
   CC_ACCOUNT_DELETE_TIMEOUT = DEFAULT_ACCOUNT_DELETE_TIMEOUT.toString(10),
   CC_DOMAIN_DELETE_TIMEOUT = DEFAULT_DOMAIN_DELETE_TIMEOUT.toString(10),
   CC_NODE_DELETE_TIMEOUT = DEFAULT_NODE_DELETE_TIMEOUT.toString(10),
+  CC_ROUTING_TABLES_CHANGE_QUEUE_URL = '',
   MAILGUN_KEY = '',
   MAILGUN_DOMAIN = '',
   RECAPTCHA_SECRET = '',
@@ -88,11 +90,16 @@ const toCheck: {[key: string]: string} = {
   RECAPTCHA_SECRET,
   POKT_ACCOUNT_PASS,
   POKT_ENDPOINT,
+  CC_ROUTING_TABLES_CHANGE_QUEUE_URL,
 };
 for(const key of Object.keys(toCheck)) {
   if(!toCheck[key])
     throw new Error(`You must enter a ${key} environment variable.`);
 }
+
+const qm = new QueueManager(
+  CC_ROUTING_TABLES_CHANGE_QUEUE_URL,
+);
 
 const mailgun = new Mailgun(formData);
 const mg = mailgun.client({username: 'api', key: MAILGUN_KEY});
@@ -133,7 +140,13 @@ const rootHandler = new RootHandler(
   domainDeleteTimeout,
   secretManager,
 );
-const accountsHandler = new AccountsHandler(db, RECAPTCHA_SECRET, poktUtils, secretManager);
+const accountsHandler = new AccountsHandler(
+  db,
+  RECAPTCHA_SECRET,
+  poktUtils,
+  secretManager,
+  qm,
+);
 const nodesHandler = new NodesHandler(db, poktUtils, nodeDeleteTimeout);
 const chainsHandler = new ChainsHandler(db);
 const providerHandler = new ProvidersHandler(db);

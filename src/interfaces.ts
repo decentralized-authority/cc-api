@@ -71,3 +71,9 @@ export interface DeletedUserDomain extends UserDomain {
 export interface DeletedNode extends Node {
   deletedAt: string
 }
+
+export interface RoutingTablesChange {
+  user: string
+  type: string
+  chains: string[]
+}

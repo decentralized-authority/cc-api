@@ -19,10 +19,12 @@ import bindAll from 'lodash/bindAll';
 import { SessionToken } from './root-handler';
 import { PoktUtils } from '../pokt-utils';
 import { EncryptionManager } from '../encryption-manager';
-import { ChainHost } from '../interfaces';
+import { ChainHost, RoutingTablesChange } from '../interfaces';
 import isArray from 'lodash/isArray';
 import { SecretManager } from '../secret-manager';
-import { envVars, secretsKeys } from '../constants';
+import { envVars, routingChangeType, secretsKeys } from '../constants';
+import { QueueManager } from '../queue-manager';
+import uniq from 'lodash/uniq';
 
 export interface Account {
   id: string
@@ -74,14 +76,16 @@ export class AccountsHandler extends RouteHandler {
   _recaptchaSecret: string;
   _poktUtils: PoktUtils;
   _secretManager: SecretManager;
+  _qm: QueueManager;
 
-  constructor(db: DB, recaptchaSecret: string, poktUtils: PoktUtils, secretManager: SecretManager) {
+  constructor(db: DB, recaptchaSecret: string, poktUtils: PoktUtils, secretManager: SecretManager, qm: QueueManager) {
     super();
     this._db = db;
     this._dbUtils = new DBUtils(db);
     this._recaptchaSecret = recaptchaSecret;
     this._poktUtils = poktUtils;
     this._secretManager = secretManager;
+    this._qm = qm;
     bindAll(this, [
       'getAccount',
       'postAccountUpdateEmail',
@@ -206,6 +210,14 @@ export class AccountsHandler extends RouteHandler {
     }));
     // Delete user account
     await this._dbUtils.deleteAccount(account.id);
+    if(process.env.NODE_ENV !== 'development') {
+      const changeParams: RoutingTablesChange = {
+        user: account.id,
+        type: routingChangeType.DELETE_ACCOUNT,
+        chains: [],
+      };
+      await this._qm.routingTablesChange.sendMessage(changeParams);
+    }
     return httpResponse(200, true);
   }
 
@@ -281,7 +293,15 @@ export class AccountsHandler extends RouteHandler {
       ...account.chains,
       newChain,
     ];
-      await this._dbUtils.updateAccount(account.id, {chains: newChains});
+    await this._dbUtils.updateAccount(account.id, {chains: newChains});
+    if(process.env.NODE_ENV !== 'development') {
+      const changeParams: RoutingTablesChange = {
+        user: account.id,
+        type: routingChangeType.ADD_CHAIN,
+        chains: [id],
+      };
+      await this._qm.routingTablesChange.sendMessage(changeParams);
+    }
     return httpResponse(200, newChain);
   }
 
@@ -299,6 +319,14 @@ export class AccountsHandler extends RouteHandler {
     const newChains = account.chains
       .filter((c) => c.id !== id);
     await this._dbUtils.updateAccount(account.id, {chains: newChains});
+    if(process.env.NODE_ENV !== 'development') {
+      const changeParams: RoutingTablesChange = {
+        user: account.id,
+        type: routingChangeType.REMOVE_CHAIN,
+        chains: [id],
+      };
+      await this._qm.routingTablesChange.sendMessage(changeParams);
+    }
     return httpResponse(200, true);
   }
 
@@ -313,6 +341,7 @@ export class AccountsHandler extends RouteHandler {
     let { chains } = parsed as AccountUpdateChainsPostBody;
     if(!chains || !isArray(chains))
       return httpErrorResponse(400, 'Request must include a chains array of id string');
+    chains = uniq(chains);
     const newChains: ChainHost[] = [];
     for(const id of chains) {
       if(!isString(id))
@@ -334,6 +363,14 @@ export class AccountsHandler extends RouteHandler {
         chain: c.id,
       })));
     await this._dbUtils.updateAccount(account.id, {chains: newChains});
+    if(process.env.NODE_ENV !== 'development') {
+      const changeParams: RoutingTablesChange = {
+        user: account.id,
+        type: routingChangeType.UPDATE_CHAINS,
+        chains,
+      };
+      await this._qm.routingTablesChange.sendMessage(changeParams);
+    }
     return httpResponse(200, newChains);
   }
 
