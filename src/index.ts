@@ -147,7 +147,12 @@ const accountsHandler = new AccountsHandler(
   secretManager,
   qm,
 );
-const nodesHandler = new NodesHandler(db, poktUtils, nodeDeleteTimeout);
+const nodesHandler = new NodesHandler(
+  db,
+  poktUtils,
+  nodeDeleteTimeout,
+  qm,
+);
 const chainsHandler = new ChainsHandler(db);
 const providerHandler = new ProvidersHandler(db);
 

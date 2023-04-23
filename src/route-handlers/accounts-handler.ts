@@ -42,6 +42,7 @@ export interface Account {
   agreeCookies: boolean,
   agreeCookiesDate: string,
   chains: ChainHost[],
+  disabled: boolean,
 }
 
 export interface AccountDeletePostBody {

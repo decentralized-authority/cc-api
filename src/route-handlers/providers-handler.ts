@@ -236,6 +236,8 @@ export class ProvidersHandler extends RouteHandler {
     ]);
     const endpoints: {[chainId: string]: string[]} = {};
     for(const account of accounts) {
+      if(account.disabled)
+        continue;
       // @ts-ignore
       const chains: ChainHost[] = account.chains || [];
       for(const { id, host } of chains) {

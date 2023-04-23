@@ -35,6 +35,8 @@ export const createDeletedAccountModel = (tableName: string) => dynogels.define(
     // @ts-ignore
     chains: Joi.string(),
     // @ts-ignore
+    disabled: Joi.boolean(),
+    // @ts-ignore
     deletedAt: Joi.string(),
   },
 });

@@ -8,7 +8,7 @@ import {
   httpErrorResponse,
   httpResponse, sha256
 } from '../util';
-import { DeletedNode, Node } from '../interfaces';
+import { DeletedNode, Node, RoutingTablesChange } from '../interfaces';
 import isPlainObject from 'lodash/isPlainObject';
 import isString from 'lodash/isString';
 import { DBUtils } from '../db-utils';
@@ -18,6 +18,8 @@ import bindAll from 'lodash/bindAll';
 import { PoktUtils } from '../pokt-utils';
 import escapeRegExp from 'lodash/escapeRegExp';
 import dayjs from 'dayjs';
+import { routingChangeType } from '../constants';
+import { QueueManager } from '../queue-manager';
 
 export interface NodesPostBody {
   address: string
@@ -29,13 +31,15 @@ export class NodesHandler extends RouteHandler {
   _dbUtils: DBUtils;
   _poktUtils: PoktUtils;
   _nodeDeleteTimeout: number;
+  _qm: QueueManager;
 
-  constructor(db: DB, poktUtils: PoktUtils, nodeDeleteTimeout: number) {
+  constructor(db: DB, poktUtils: PoktUtils, nodeDeleteTimeout: number, qm: QueueManager) {
     super();
     this._db = db;
     this._dbUtils = new DBUtils(db);
     this._poktUtils = poktUtils;
     this._nodeDeleteTimeout = nodeDeleteTimeout;
+    this._qm = qm;
     bindAll(this, [
       'getNodes',
       'postNodes',
@@ -102,6 +106,14 @@ export class NodesHandler extends RouteHandler {
       user: account.id,
     };
     await this._dbUtils.createNode(node);
+    if(process.env.NODE_ENV !== 'development') {
+      const changeParams: RoutingTablesChange = {
+        user: account.id,
+        type: routingChangeType.ADD_NODE,
+        chains: [],
+      };
+      await this._qm.routingTablesChange.sendMessage(changeParams);
+    }
     return httpResponse(200, node);
   }
 
@@ -131,6 +143,14 @@ export class NodesHandler extends RouteHandler {
     if(!node)
       return httpErrorResponse(404, 'Not found');
     await this._dbUtils.deleteNode(node.id);
+    if(process.env.NODE_ENV !== 'development') {
+      const changeParams: RoutingTablesChange = {
+        user: account.id,
+        type: routingChangeType.DELETE_NODE,
+        chains: [],
+      };
+      await this._qm.routingTablesChange.sendMessage(changeParams);
+    }
     return httpResponse(200, true);
   }
 

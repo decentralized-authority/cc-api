@@ -10,6 +10,7 @@ import { DBUtils } from '../db-utils';
 import { NodesHandler } from './nodes-handler';
 import { SessionToken } from './root-handler';
 import { PoktUtils } from '../pokt-utils';
+import { QueueManager } from '../queue-manager';
 
 describe('NodesHandler', function() {
 
@@ -45,7 +46,13 @@ describe('NodesHandler', function() {
     );
     await db.initialize();
     dbUtils = new DBUtils(db);
-    nodesHandler = new NodesHandler(db, new PoktUtils(process.env.POKT_ENDPOINT || ''), DEFAULT_NODE_DELETE_TIMEOUT);
+    const qm = new QueueManager(process.env.CC_ROUTING_TABLES_CHANGE_QUEUE_URL || '');
+    nodesHandler = new NodesHandler(
+      db,
+      new PoktUtils(process.env.POKT_ENDPOINT || ''),
+      DEFAULT_NODE_DELETE_TIMEOUT,
+      qm,
+    );
     const poktAccount = await createPoktAccount();
     const now = dayjs().toISOString();
     const salt = generateSalt();
@@ -65,6 +72,7 @@ describe('NodesHandler', function() {
       agreeCookies: true,
       agreeCookiesDate: now,
       chains: [],
+      disabled: false,
     };
     await dbUtils.createAccount(account);
     goodSessionToken = {

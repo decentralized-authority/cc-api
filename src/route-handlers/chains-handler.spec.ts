@@ -61,6 +61,7 @@ describe('ChainsHandler', function() {
       agreeCookiesDate: now,
       isPartner: false,
       chains: [],
+      disabled: false,
     };
     await dbUtils.createAccount(account);
     sampleChain = {

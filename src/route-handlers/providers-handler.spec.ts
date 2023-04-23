@@ -133,6 +133,7 @@ describe('ProvidersHandler', function() {
         agreeCookies: true,
         agreeCookiesDate: now,
         chains: [],
+        disabled: false,
       };
       const userChains = [];
       for(let i = 0; i < rpcEndpoints.length; i++) {

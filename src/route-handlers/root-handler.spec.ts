@@ -84,6 +84,7 @@ describe('RootHandler', function() {
       agreeCookiesDate: now,
       isPartner: false,
       chains: [],
+      disabled: false,
     };
     await dbUtils.createAccount(account);
     goodSessionToken = {
@@ -174,6 +175,7 @@ describe('RootHandler', function() {
           agreeCookiesDate: now,
           isPartner: false,
           chains: [],
+          disabled: false,
         };
         await dbUtils.createAccount(prevAccount);
       }
@@ -517,6 +519,7 @@ describe('RootHandler', function() {
         agreeCookiesDate: now,
         isPartner: false,
         chains: [],
+        disabled: false,
       };
       await dbUtils.createAccount(account);
     });

@@ -85,6 +85,7 @@ describe('AccountsHandler', function () {
       agreeCookiesDate: now,
       isPartner: false,
       chains: [],
+      disabled: false,
     };
     await dbUtils.createAccount(account);
     goodSessionToken = {
@@ -669,6 +670,7 @@ describe('AccountsHandler', function () {
         agreePrivacyPolicyDate: now,
         isPartner: false,
         chains: [],
+        disabled: false,
       };
       await dbUtils.createAccount(accountToDelete);
       sessionTokenToDelete0 = {

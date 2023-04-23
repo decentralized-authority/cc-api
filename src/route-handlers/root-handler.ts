@@ -304,6 +304,7 @@ export class RootHandler extends RouteHandler {
       agreeCookiesDate: today,
       isPartner: false,
       chains: [],
+      disabled: true,
     };
     await this._dbUtils.createAccount(account);
     return httpResponse(200, omit(account, ['salt', 'passwordHash', 'chainSalt']));
