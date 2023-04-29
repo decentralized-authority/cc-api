@@ -7,7 +7,7 @@ import {
   RpcEndpoint,
   UserChainHost,
   UserDomain,
-  DeletedUserDomain, DeletedNode
+  DeletedUserDomain, DeletedNode, RelayInvoice
 } from './interfaces';
 import { Gateway, Provider } from './route-handlers/providers-handler';
 import { SessionToken } from './route-handlers/root-handler';
@@ -711,6 +711,53 @@ export class DBUtils {
             reject(err);
           } else {
             resolve(res.Items.map((i) => i.attrs));
+          }
+        });
+    });
+  }
+
+  createRelayInvoice(invoice: RelayInvoice): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      this.db.RelayInvoices.create(invoice, err => {
+        if(err)
+          reject(err);
+        else
+          resolve(true);
+      });
+    });
+  }
+
+  getRelayInvoice(id: string): Promise<RelayInvoice|null> {
+    return new Promise((resolve, reject) => {
+      this.db.RelayInvoices.get(id, (err, res) => {
+        if(err) {
+          reject(err);
+        } else if(res) {
+          // @ts-ignore
+          const attrs = res.attrs as RelayInvoice;
+          resolve(attrs);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  getRelayInvoicesByUser(user: string, count = 20): Promise<RelayInvoice[]> {
+    return new Promise((resolve, reject) => {
+      this.db.RelayInvoices
+        .query(user)
+        .usingIndex('user-date-index')
+        .descending()
+        .limit(count)
+        .exec((err, res) => {
+          if(err) {
+            reject(err);
+          } else {
+            const { Items } = res;
+            resolve(Items.map((i: { attrs: any; }) => {
+              return i.attrs;
+            }));
           }
         });
     });

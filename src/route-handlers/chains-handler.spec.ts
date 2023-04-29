@@ -38,6 +38,7 @@ describe('ChainsHandler', function() {
       'ccDeletedAccounts-test',
       'ccDeletedNodes-test',
       'ccDeletedUserDomains-test',
+      'ccRelayInvoices-test',
     );
     await db.initialize();
     dbUtils = new DBUtils(db);
@@ -74,6 +75,7 @@ describe('ChainsHandler', function() {
       allowance: 5,
       enabled: true,
       isPartnerChain: false,
+      billing: [],
     };
     await dbUtils.createChain(sampleChain);
     goodSessionToken = {

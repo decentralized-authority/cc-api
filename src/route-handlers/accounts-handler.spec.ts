@@ -44,6 +44,7 @@ describe('AccountsHandler', function () {
       'ccDeletedAccounts-test',
       'ccDeletedNodes-test',
       'ccDeletedUserDomains-test',
+      'ccRelayInvoices-test',
     );
     await db.initialize();
     dbUtils = new DBUtils(db);

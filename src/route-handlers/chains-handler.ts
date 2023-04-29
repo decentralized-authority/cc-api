@@ -30,7 +30,10 @@ export class ChainsHandler extends RouteHandler {
     chains = chains
       .filter((chain) => isPartner ? true : !chain.isPartnerChain)
       .filter((chain) => chain.enabled);
-    return httpResponse(200, chains);
+    return httpResponse(200, chains.map((c) => ({
+      id: c.id,
+      name: c.name,
+    })));
   }
 
   async getChain(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
@@ -47,7 +50,10 @@ export class ChainsHandler extends RouteHandler {
       return response404();
     if((!account?.isPartner && chain.isPartnerChain) || !chain.enabled)
       return response403();
-    return httpResponse(200, chain);
+    return httpResponse(200, {
+      id: chain.id,
+      name: chain.name,
+    });
   }
 
 }

@@ -26,5 +26,10 @@ export const createChainModel = (tableName: string) => dynogels.define('Chain', 
     enabled: Joi.boolean(),
     // @ts-ignore
     isPartnerChain: Joi.boolean(),
+    // @ts-ignore
+    billing: Joi.array().items(Joi.object({
+      date: Joi.number(),
+      perc: Joi.number(),
+    })),
   },
 });

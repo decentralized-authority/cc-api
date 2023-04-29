@@ -13,6 +13,7 @@ import { createDeletedAccountModel } from './models/deleted-account';
 import { createDeletedNodeModel } from './models/deleted-nodes';
 import { createUserDomainModel } from './models/user-domain';
 import { createDeletedUserDomainModel } from './models/deleted-user-domain';
+import { createRelayInvoiceModel } from './models/relay-invoice';
 
 export class DB {
 
@@ -30,8 +31,9 @@ export class DB {
   DeletedAccounts: Model;
   DeletedNodes: Model;
   DeletedUserDomains: Model;
+  RelayInvoices: Model;
 
-  constructor(accountsTableName: string, nodesTableName: string, chainsTableName: string, sessionTokensTableName: string, invitationsTableName: string, poktAccountsTableName: string, providersTableName: string, gatewaysTableName: string, rpcEndpointsTableName: string, userChainHostTableName: string, userDomainTableName: string, deletedAccountsTableName: string, deletedNodesTableName: string, deletedUserDomainsTableName: string) {
+  constructor(accountsTableName: string, nodesTableName: string, chainsTableName: string, sessionTokensTableName: string, invitationsTableName: string, poktAccountsTableName: string, providersTableName: string, gatewaysTableName: string, rpcEndpointsTableName: string, userChainHostTableName: string, userDomainTableName: string, deletedAccountsTableName: string, deletedNodesTableName: string, deletedUserDomainsTableName: string, relayInvoicesTableName: string) {
     this.Accounts = createAccountModel(accountsTableName);
     this.Nodes = createNodeModel(nodesTableName);
     this.Chains = createChainModel(chainsTableName);
@@ -46,6 +48,7 @@ export class DB {
     this.DeletedAccounts = createDeletedAccountModel(deletedAccountsTableName);
     this.DeletedNodes = createDeletedNodeModel(deletedNodesTableName);
     this.DeletedUserDomains = createDeletedUserDomainModel(deletedUserDomainsTableName);
+    this.RelayInvoices = createRelayInvoiceModel(relayInvoicesTableName);
   }
 
   initialize(): Promise<void> {

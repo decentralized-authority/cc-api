@@ -22,6 +22,10 @@ export interface Node {
   user: string
 }
 
+export interface ChainBilling {
+  date: number
+  perc: number
+}
 export interface Chain {
   id: string
   name: string
@@ -33,6 +37,7 @@ export interface Chain {
   authRpcEndpoint?: string
   enabled: boolean
   isPartnerChain: boolean
+  billing: ChainBilling[]
 }
 
 export interface PoktAccount {
@@ -76,4 +81,21 @@ export interface RoutingTablesChange {
   user: string
   type: string
   chains: string[]
+}
+
+export interface RelayInvoiceRelays {
+  chain: string
+  sessionRelays: string
+  sessionRewards: string
+  relays: string
+  rewardsPerc: number
+  rewardsAmt: string
+}
+export interface RelayInvoice {
+  id: string
+  user: string
+  date: number
+  total: string
+  txid?: string
+  relays: RelayInvoiceRelays[]
 }
