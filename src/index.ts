@@ -233,7 +233,7 @@ server
   .post(routes.ACCOUNT_ADD_CHAIN, accountsHandler.postAccountAddChain, true, postAccountAddChainBody)
   .post(routes.ACCOUNT_REMOVE_CHAIN, accountsHandler.postAccountRemoveChain, true, postAccountRemoveChainBody)
   .post(routes.ACCOUNT_UPDATE_CHAINS, accountsHandler.postAccountUpdateChains, true, postAccountUpdateChainsBody)
-  .get(routes.ACCOUNT_RELAY_INVOICES, accountsHandler.postAccountRelayInvoices, true, postAccountRelayInvoicesBody)
+  .post(routes.ACCOUNT_RELAY_INVOICES, accountsHandler.postAccountRelayInvoices, true, postAccountRelayInvoicesBody)
   .post(routes.ACCOUNT_DELETE, accountsHandler.postAccountDelete, true, postAccountDeleteBody)
   // chainsHandler routes
   .get(routes.CHAINS, chainsHandler.getChains, true, null)
