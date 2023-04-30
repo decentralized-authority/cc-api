@@ -25,6 +25,7 @@ import { SecretManager } from '../secret-manager';
 import { envVars, routingChangeType, secretsKeys } from '../constants';
 import { QueueManager } from '../queue-manager';
 import uniq from 'lodash/uniq';
+import isNumber from 'lodash/isNumber';
 
 export interface Account {
   id: string
@@ -69,6 +70,9 @@ export interface AccountAddChainPostBody {
 export interface AccountUpdateChainsPostBody {
   chains: string[]
 }
+export interface AccountRelayInvoicesPostBody {
+  count: number
+}
 
 export class AccountsHandler extends RouteHandler {
 
@@ -97,6 +101,7 @@ export class AccountsHandler extends RouteHandler {
       'postAccountAddChain',
       'postAccountRemoveChain',
       'postAccountUpdateChains',
+      'postAccountRelayInvoices',
     ]);
   }
 
@@ -373,6 +378,21 @@ export class AccountsHandler extends RouteHandler {
       await this._qm.routingTablesChange.sendMessage(changeParams);
     }
     return httpResponse(200, newChains);
+  }
+
+  async postAccountRelayInvoices(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+    const { body, pathParameters } = event;
+    const [ errResponse, account ] = await getAccountFromToken(this._db, event, pathParameters?.id || '');
+    if(errResponse)
+      return errResponse;
+    if(!body || !goodBody(body, isPlainObject))
+      return httpErrorResponse(400, 'Invalid body');
+    const parsed = JSON.parse(body);
+    let { count } = parsed as AccountRelayInvoicesPostBody;
+    if(!count || !isNumber(count))
+      return httpErrorResponse(400, 'Request body must include a count number');
+    const relayInvoices = await this._dbUtils.getRelayInvoicesByUser(account.id, count);
+    return httpResponse(200, relayInvoices);
   }
 
 }

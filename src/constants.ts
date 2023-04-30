@@ -16,6 +16,7 @@ export const routes = {
   ACCOUNT_ADD_CHAIN: '/v1/accounts/{id}/add-chain',
   ACCOUNT_REMOVE_CHAIN: '/v1/accounts/{id}/remove-chain',
   ACCOUNT_UPDATE_CHAINS: '/v1/accounts/{id}/update-chains',
+  ACCOUNT_RELAY_INVOICES: '/v1/accounts/{id}/relay-invoices',
 
   NODES: '/v1/nodes',
   NODE: '/v1/nodes/{address}',

@@ -727,6 +727,17 @@ export class DBUtils {
     });
   }
 
+  deleteRelayInvoice(id: string): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      this.db.RelayInvoices.destroy({id}, err => {
+        if(err)
+          reject(err);
+        else
+          resolve(true);
+      });
+    });
+  }
+
   getRelayInvoice(id: string): Promise<RelayInvoice|null> {
     return new Promise((resolve, reject) => {
       this.db.RelayInvoices.get(id, (err, res) => {

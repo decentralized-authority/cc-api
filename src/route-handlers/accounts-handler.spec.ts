@@ -4,7 +4,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { Account, AccountsHandler } from './accounts-handler';
 import { createPoktAccount, generateId, generateSalt, hashPassword, httpErrorResponse } from '../util';
 import dayjs from 'dayjs';
-import { Node } from '../interfaces';
+import { Node, RelayInvoice } from '../interfaces';
 import { DBUtils } from '../db-utils';
 import { SessionToken } from './root-handler';
 import { PoktUtils } from '../pokt-utils';
@@ -27,6 +27,7 @@ describe('AccountsHandler', function () {
   let goodSessionToken: SessionToken;
   let expiredSessionToken: SessionToken;
   let otherSessionToken: SessionToken;
+  let relayInvoices: RelayInvoice[];
 
   before(async function() {
     db = new DB(
@@ -89,6 +90,37 @@ describe('AccountsHandler', function () {
       disabled: false,
     };
     await dbUtils.createAccount(account);
+    relayInvoices = [
+      {
+        id: generateId(),
+        user: account.id,
+        date: dayjs().subtract(1, 'day').valueOf(),
+        total: '1010',
+        relays: [],
+      },
+      {
+        id: generateId(),
+        user: account.id,
+        date: dayjs().valueOf(),
+        total: '1000',
+        relays: [],
+      },
+      {
+        id: generateId(),
+        user: account.id,
+        date: dayjs().subtract(3, 'days').valueOf(),
+        total: '1030',
+        relays: [],
+      },
+      {
+        id: generateId(),
+        user: account.id,
+        date: dayjs().subtract(2, 'days').valueOf(),
+        total: '1020',
+        relays: [],
+      },
+    ];
+    await Promise.all(relayInvoices.map((invoice) => dbUtils.createRelayInvoice(invoice)));
     goodSessionToken = {
       token: generateId(),
       user: account.id,
@@ -642,6 +674,51 @@ describe('AccountsHandler', function () {
     });
   });
 
+  describe('.postAccountRelayInvoices', function() {
+    it('should get the account\'s recent relay invoices', async function() {
+      await runTokenTests(accountsHandler.postAccountRelayInvoices);
+      { // Bad bodies
+        const badBodies = [
+          undefined,
+          2,
+          JSON.stringify(2),
+          JSON.stringify({}),
+          JSON.stringify({count: undefined}),
+          JSON.stringify({count: 'something'}),
+        ];
+        for(const body of badBodies) {
+          // @ts-ignore
+          const res = await accountsHandler.postAccountRelayInvoices({resource: '', httpMethod: '', pathParameters: {id: account.id}, body, headers: {'x-api-key': goodSessionToken.token}});
+          res.should.be.an.Object();
+          res.statusCode.should.equal(400);
+          res.body.should.be.a.String();
+        }
+      }
+      { // Good token
+        const count = 3;
+        // @ts-ignore
+        const res = await accountsHandler.postAccountRelayInvoices({
+          resource: '',
+          httpMethod: '',
+          pathParameters: {id: account.id},
+          body: JSON.stringify({count}),
+          headers: {'x-api-key': goodSessionToken.token}
+        });
+        res.should.be.an.Object();
+        res.statusCode.should.equal(200);
+        res.body.should.be.a.String();
+        const parsed: RelayInvoice[] = JSON.parse(res.body);
+        parsed.should.be.an.Array();
+        parsed.length.should.equal(count);
+        const sortedRelayInvoices = [...relayInvoices]
+          .sort((a, b) => b.date - a.date);
+        for(let i = 0; i < parsed.length; i++) {
+          parsed[i].id.should.equal(sortedRelayInvoices[i].id);
+        }
+      }
+    });
+  });
+
   describe('.postAccountDelete()', function() {
 
     let accountToDelete: Account;
@@ -805,6 +882,7 @@ describe('AccountsHandler', function () {
       await dbUtils.deletePoktAccount(account.poktAddress);
       await dbUtils.deleteAccount(account.id);
     }
+    await Promise.all(relayInvoices.map((invoice) => dbUtils.deleteRelayInvoice(invoice.id)));
   });
 
 });

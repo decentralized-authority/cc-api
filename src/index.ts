@@ -2,7 +2,7 @@ import { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
 import { DB } from './db';
 import {
   AccountAddChainPostBody,
-  AccountDeletePostBody,
+  AccountDeletePostBody, AccountRelayInvoicesPostBody,
   AccountsHandler, AccountUpdateChainsPostBody,
   PrivateKeyPostBody,
   UpdateEmailPostBody,
@@ -14,7 +14,7 @@ import {
   DEFAULT_ACCOUNT_DELETE_TIMEOUT,
   DEFAULT_DOMAIN_DELETE_TIMEOUT,
   DEFAULT_NODE_DELETE_TIMEOUT,
-  routes, secretsKeys
+  routes
 } from './constants';
 import { NodesHandler, NodesPostBody } from './route-handlers/nodes-handler';
 import { ChainsHandler } from './route-handlers/chains-handler';
@@ -26,7 +26,7 @@ import {
   UnlockHandlerPostBody
 } from './route-handlers/root-handler';
 import { CCServer } from './cc-server';
-import { httpResponse, timeout } from './util';
+import { httpResponse } from './util';
 import { PoktUtils } from './pokt-utils';
 import {
   ProviderGatewayErrorLogPostBody,
@@ -213,6 +213,9 @@ const postProviderUnlockBody: ProviderUnlockPostBody = {
 const postLogsBody: ProviderGatewayErrorLogPostBody = {
   logs: [''],
 };
+const postAccountRelayInvoicesBody: AccountRelayInvoicesPostBody = {
+  count: 0,
+};
 
 server
   // rootHandler routes
@@ -230,6 +233,7 @@ server
   .post(routes.ACCOUNT_ADD_CHAIN, accountsHandler.postAccountAddChain, true, postAccountAddChainBody)
   .post(routes.ACCOUNT_REMOVE_CHAIN, accountsHandler.postAccountRemoveChain, true, postAccountRemoveChainBody)
   .post(routes.ACCOUNT_UPDATE_CHAINS, accountsHandler.postAccountUpdateChains, true, postAccountUpdateChainsBody)
+  .get(routes.ACCOUNT_RELAY_INVOICES, accountsHandler.postAccountRelayInvoices, true, postAccountRelayInvoicesBody)
   .post(routes.ACCOUNT_DELETE, accountsHandler.postAccountDelete, true, postAccountDeleteBody)
   // chainsHandler routes
   .get(routes.CHAINS, chainsHandler.getChains, true, null)
