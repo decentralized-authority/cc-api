@@ -392,7 +392,14 @@ export class AccountsHandler extends RouteHandler {
     if(!count || !isNumber(count))
       return httpErrorResponse(400, 'Request body must include a count number');
     const relayInvoices = await this._dbUtils.getRelayInvoicesByUser(account.id, count);
-    return httpResponse(200, relayInvoices);
+    return httpResponse(200, relayInvoices
+      .map((invoice) => {
+        return {
+          ...invoice,
+          relays: invoice.relays
+            .map((relayInvoiceRelays) => omit(relayInvoiceRelays, ['providerBreakdown'])),
+        };
+      }));
   }
 
 }

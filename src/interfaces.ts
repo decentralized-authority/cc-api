@@ -90,6 +90,7 @@ export interface RelayInvoiceRelays {
   relays: string
   rewardsPerc: number
   rewardsAmt: string
+  providerBreakdown: {[provider: string]: string}
 }
 export interface RelayInvoice {
   id: string
