@@ -28,6 +28,7 @@ export const createRelayInvoiceModel = (tableName: string) => dynogels.define('R
         relays: Joi.string(),
         rewardsPerc: Joi.number(),
         rewardsAmt: Joi.string(),
+        providerBreakdown: Joi.object(),
       }),
     ),
   },

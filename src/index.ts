@@ -60,7 +60,6 @@ const {
   MAILGUN_KEY = '',
   MAILGUN_DOMAIN = '',
   RECAPTCHA_SECRET = '',
-  POKT_ACCOUNT_PASS = '',
   POKT_ENDPOINT = '',
 } = process.env;
 
@@ -90,7 +89,6 @@ const toCheck: {[key: string]: string} = {
   MAILGUN_KEY,
   MAILGUN_DOMAIN,
   RECAPTCHA_SECRET,
-  POKT_ACCOUNT_PASS,
   POKT_ENDPOINT,
   CC_ROUTING_TABLES_CHANGE_QUEUE_URL,
 };
