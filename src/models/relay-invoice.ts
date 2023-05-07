@@ -20,6 +20,10 @@ export const createRelayInvoiceModel = (tableName: string) => dynogels.define('R
     // @ts-ignore
     txid: Joi.string(),
     // @ts-ignore
+    providersPaid: Joi.boolean(),
+    // @ts-ignore
+    ccPaid: Joi.boolean(),
+    // @ts-ignore
     relays: Joi.array().items(
       Joi.object({
         chain: Joi.string(),

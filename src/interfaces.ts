@@ -98,5 +98,7 @@ export interface RelayInvoice {
   date: number
   total: string
   txid?: string
+  providersPaid: boolean
+  ccPaid: boolean
   relays: RelayInvoiceRelays[]
 }

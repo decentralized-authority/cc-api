@@ -395,9 +395,11 @@ export class AccountsHandler extends RouteHandler {
     return httpResponse(200, relayInvoices
       .map((invoice) => {
         return {
-          ...invoice,
+          ...omit(invoice, ['providersPaid', 'ccPaid']),
           relays: invoice.relays
-            .map((relayInvoiceRelays) => omit(relayInvoiceRelays, ['providerBreakdown'])),
+            .map((relayInvoiceRelays) => {
+              return omit(relayInvoiceRelays, ['providerBreakdown']);
+            }),
         };
       }));
   }
