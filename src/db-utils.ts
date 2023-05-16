@@ -564,6 +564,37 @@ export class DBUtils {
     });
   }
 
+  getGateways(): Promise<Gateway[]> {
+    return new Promise((resolve, reject) => {
+      this.db.Gateways
+        .scan()
+        .loadAll()
+        .exec((err, { Items }) => {
+          if(err) {
+            reject(err);
+          } else {
+            resolve(Items.map((i: { attrs: any; }) => i.attrs));
+          }
+        });
+    });
+  }
+
+  getGatewaysLimited(attributes: string[]): Promise<Gateway[]> {
+    return new Promise((resolve, reject) => {
+      this.db.Gateways
+        .scan()
+        .loadAll()
+        .attributes(attributes)
+        .exec((err, { Items }) => {
+          if(err) {
+            reject(err);
+          } else {
+            resolve(Items.map((i: { attrs: any; }) => i.attrs));
+          }
+        });
+    });
+  }
+
   getGateway(id: string): Promise<Gateway|null> {
     return new Promise((resolve, reject) => {
       this.db.Gateways.get({id}, (err, res) => {
@@ -615,6 +646,54 @@ export class DBUtils {
         else
           resolve(true);
       });
+    });
+  }
+
+  getRpcEndpoints(): Promise<RpcEndpoint[]> {
+    return new Promise((resolve, reject) => {
+      this.db.RpcEndpoints
+        .scan()
+        .loadAll()
+        .exec((err, { Items }) => {
+          if(err) {
+            reject(err);
+          } else {
+            resolve(Items.map((i: { attrs: any; }) => i.attrs));
+          }
+        });
+    });
+  }
+
+  getRpcEndpointsLimited(attributes: string[]): Promise<RpcEndpoint[]> {
+    return new Promise((resolve, reject) => {
+      this.db.RpcEndpoints
+        .scan()
+        .loadAll()
+        .attributes(attributes)
+        .exec((err, { Items }) => {
+          if(err) {
+            reject(err);
+          } else {
+            resolve(Items.map((i: { attrs: any; }) => i.attrs));
+          }
+        });
+    });
+  }
+
+  getRpcEndpointsByChainLimited(chainId: string, attributes: string[]): Promise<RpcEndpoint[]> {
+    return new Promise((resolve, reject) => {
+      this.db.RpcEndpoints
+        .scan()
+        .loadAll()
+        .where('chainId').equals(chainId)
+        .attributes(attributes)
+        .exec((err, { Items }) => {
+          if(err) {
+            reject(err);
+          } else {
+            resolve(Items.map((i: { attrs: any; }) => i.attrs));
+          }
+        });
     });
   }
 

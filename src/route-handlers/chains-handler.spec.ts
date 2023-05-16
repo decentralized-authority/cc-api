@@ -8,6 +8,7 @@ import { Account } from './accounts-handler';
 import { SessionToken } from './root-handler';
 import { Chain } from '../interfaces';
 import { DBUtils } from '../db-utils';
+import isPlainObject from 'lodash/isPlainObject';
 
 describe('ChainsHandler', function() {
 
@@ -157,6 +158,8 @@ describe('ChainsHandler', function() {
         const parsed: Chain[] = JSON.parse(res.body);
         parsed.should.be.an.Array();
         parsed.some(c => c.id === sampleChain.id).should.be.True();
+        // @ts-ignore
+        parsed.every(c => isPlainObject(c.providers)).should.be.True();
       }
     });
   });
@@ -190,6 +193,8 @@ describe('ChainsHandler', function() {
         const parsed: Chain = JSON.parse(res.body);
         parsed.should.be.an.Object();
         parsed.id.should.equal(sampleChain.id);
+        // @ts-ignore
+        should(parsed.providers).be.an.Object();
       }
     });
   });
