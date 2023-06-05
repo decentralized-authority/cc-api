@@ -6,11 +6,18 @@ import {
   ProviderUnlockPostBody
 } from './providers-handler';
 import { DB } from '../db';
-import { createPoktAccount, generateGateway, generateId, generateSalt, hashPassword } from '../util';
+import {
+  createPoktAccount,
+  generateCombinedApiKey,
+  generateGateway,
+  generateId,
+  generateSalt,
+  hashPassword, splitCombinedApiKey
+} from '../util';
 import { DBUtils } from '../db-utils';
 import { SessionToken } from './root-handler';
 import dayjs from 'dayjs';
-import { Node, RpcEndpoint } from '../interfaces';
+import { ApiKey, Node, RpcEndpoint } from '../interfaces';
 import { Account } from './accounts-handler';
 
 describe('ProvidersHandler', function() {
@@ -28,6 +35,8 @@ describe('ProvidersHandler', function() {
   let otherRpcEndpoints: RpcEndpoint[] = [];
   let nodes: Node[] = [];
   let users: Account[] = [];
+  let apiKey: ApiKey;
+  let combinedKey: string;
 
   before(async function() {
     db = new DB(
@@ -46,6 +55,7 @@ describe('ProvidersHandler', function() {
       'ccDeletedNodes-test',
       'ccDeletedUserDomains-test',
       'ccRelayInvoices-test',
+      'ccApiKeys-test',
     );
     await db.initialize();
     dbUtils = new DBUtils(db);
@@ -55,8 +65,8 @@ describe('ProvidersHandler', function() {
       id: generateId(),
       name: 'Test Provider',
       email: `${generateId()}@test.com`,
-      keyHash: hashPassword(key, keySalt),
-      keySalt,
+      // keyHash: hashPassword(key, keySalt),
+      // keySalt,
       poktAddress: generateId(),
       agreeTos: true,
       agreeTosDate: new Date().toISOString(),
@@ -64,10 +74,27 @@ describe('ProvidersHandler', function() {
       agreePrivacyPolicyDate: new Date().toISOString(),
     };
     await dbUtils.createProvider(provider);
+
+    const key = generateId();
+    const salt = generateSalt();
+    combinedKey = generateCombinedApiKey(key);
+    const [ id ] = splitCombinedApiKey(combinedKey);
+    apiKey = {
+      id,
+      accountId: provider.id,
+      salt,
+      hash: hashPassword(key, salt),
+      type: 'GATEWAY',
+      level: 2,
+      name: 'test api key',
+    };
+    await dbUtils.createApiKey(apiKey);
+
     sessionToken = {
       token: generateId(),
       user: provider.id,
       expiration: dayjs().add(1, 'day').toISOString(),
+      keyId: apiKey.id,
     };
     await dbUtils.createSessionToken(sessionToken);
     for(let i = 0; i < 3; i++) {
@@ -155,6 +182,8 @@ describe('ProvidersHandler', function() {
     const key = generateId();
     let provider: Provider;
     let sessionToken: SessionToken;
+    let apiKey: ApiKey;
+    let combinedKey: string;
 
     before(async function() {
       const keySalt = generateSalt();
@@ -162,8 +191,8 @@ describe('ProvidersHandler', function() {
         id: generateId(),
         name: 'Another Test Provider',
         email: `${generateId()}@test.com`,
-        keyHash: hashPassword(key, keySalt),
-        keySalt,
+        // keyHash: hashPassword(key, keySalt),
+        // keySalt,
         poktAddress: generateId(),
         agreeTos: true,
         agreeTosDate: new Date().toISOString(),
@@ -171,6 +200,22 @@ describe('ProvidersHandler', function() {
         agreePrivacyPolicyDate: new Date().toISOString(),
       };
       await dbUtils.createProvider(provider);
+
+      const key = generateId();
+      const salt = generateSalt();
+      combinedKey = generateCombinedApiKey(key);
+      const [ id ] = splitCombinedApiKey(combinedKey);
+      apiKey = {
+        id,
+        accountId: provider.id,
+        salt,
+        hash: hashPassword(key, salt),
+        type: 'GATEWAY',
+        level: 2,
+        name: 'test api key',
+      };
+      await dbUtils.createApiKey(apiKey);
+
     });
 
     it('should generate a new session token for a valid provider', async function() {
@@ -227,7 +272,7 @@ describe('ProvidersHandler', function() {
       }
       { // Good credentials
         const body: ProviderUnlockPostBody = {
-          key,
+          key: combinedKey,
         };
         // @ts-ignore
         const res = await providersHandler.postProviderUnlock({
@@ -245,6 +290,7 @@ describe('ProvidersHandler', function() {
         sessionToken.should.be.an.Object();
         sessionToken.token.should.be.a.String();
         sessionToken.user.should.equal(provider.id)
+        should(sessionToken.keyId).equal(apiKey.id);
         sessionToken.expiration.should.be.a.String();
         dayjs(sessionToken.expiration).isAfter(dayjs()).should.be.True();
       }
@@ -253,6 +299,7 @@ describe('ProvidersHandler', function() {
     after(async function() {
       await dbUtils.deleteSessionToken(sessionToken.token);
       await dbUtils.deleteProvider(provider.id);
+      await dbUtils.deleteApiKey(provider.id, apiKey.id);
     });
 
   });
@@ -372,7 +419,7 @@ describe('ProvidersHandler', function() {
   });
 
   describe('.getProviderGatewayHosts()', function() {
-    it('should get all hosts which should be served by the gateway', async function() {
+    it('should get all hosts which will be served by the gateway', async function() {
       { // Good user
         const gateway = gateways[0];
         // @ts-ignore
@@ -392,7 +439,7 @@ describe('ProvidersHandler', function() {
         should(parsed).be.an.Array();
         const chainIds = new Set(rpcEndpoints.map(r => r.chainId));
         parsed.length.should.equal(rpcEndpoints.length);
-        const allHosts = new Set();
+        const allHosts = new Set<string>();
         for(const user of users) {
           const chains = user.chains || [];
           for(const chain of chains) {
@@ -503,6 +550,7 @@ describe('ProvidersHandler', function() {
   after(async function() {
     await dbUtils.deleteSessionToken(sessionToken.token);
     await dbUtils.deleteProvider(provider.id);
+    await dbUtils.deleteApiKey(provider.id, apiKey.id);
     await Promise.all(gateways.map(gateway => dbUtils.deleteGateway(gateway.id)));
     await Promise.all([...rpcEndpoints, ...otherRpcEndpoints].map(rpcEndpoint => dbUtils.deleteRpcEndpoint(rpcEndpoint.id)));
     await Promise.all(nodes.map(node => dbUtils.deleteNode(node.id)));

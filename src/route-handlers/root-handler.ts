@@ -52,6 +52,7 @@ export interface SessionToken {
   token: string
   user: string
   expiration: string
+  keyId?: string
 }
 
 export interface QueryPoktNodesPostBody {

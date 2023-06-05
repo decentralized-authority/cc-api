@@ -29,6 +29,13 @@ describe('CCServer', function() {
       'ccProviders-test',
       'ccGateways-test',
       'ccRpcEndpoints-test',
+      'ccUserChainHosts-test',
+      'ccUserDomains-test',
+      'ccDeletedAccounts-test',
+      'ccDeletedNodes-test',
+      'ccDeletedUserDomains-test',
+      'ccRelayInvoices-test',
+      'ccApiKeys-test',
     );
     dbUtils = new DBUtils(db);
   });

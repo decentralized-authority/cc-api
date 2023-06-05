@@ -102,3 +102,13 @@ export interface RelayInvoice {
   ccPaid: boolean
   relays: RelayInvoiceRelays[]
 }
+
+export interface ApiKey {
+  id: string
+  accountId: string
+  hash: string
+  salt: string
+  name: string
+  type: "GATEWAY"|"USER"
+  level: number // 0 - no access, 1 - read, 2 - read/write
+}

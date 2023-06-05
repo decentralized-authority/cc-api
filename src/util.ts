@@ -10,6 +10,7 @@ import request from 'superagent';
 import { SessionToken } from './route-handlers/root-handler';
 import { Gateway, Provider } from './route-handlers/providers-handler';
 import { DBUtils } from './db-utils';
+import { ApiKey } from './interfaces';
 
 export const timeout = (length = 0) => new Promise(resolve => setTimeout(resolve, length));
 
@@ -135,7 +136,7 @@ export const getAccountFromToken = async (db: DB, event: APIGatewayProxyEvent, i
   return [null, account];
 }
 
-export const getProviderAccountFromToken = async (db: DB, event: APIGatewayProxyEvent, id?: string): Promise<[APIGatewayProxyResult, null]|[null, Provider]> => {
+export const getProviderAccountFromToken = async (db: DB, event: APIGatewayProxyEvent, id?: string): Promise<[APIGatewayProxyResult, null]|[null, Provider, ApiKey]> => {
   const token = event.headers[SESSION_TOKEN_HEADER];
   if(!token)
     return [response403('Missing x-api-key header.'), null];
@@ -154,7 +155,13 @@ export const getProviderAccountFromToken = async (db: DB, event: APIGatewayProxy
   });
   if(!provider)
     return [response404(), null];
-  return [null, provider];
+  const dbUtils = new DBUtils(db);
+  if(!sessionToken.keyId)
+    return [response403(), null];
+  const apiKey = await dbUtils.getApiKey(provider.id, sessionToken.keyId);
+  if(!apiKey)
+    return [response403(), null];
+  return [null, provider, apiKey];
 }
 
 export const checkRecaptcha = async function(recaptchaSecret: string, recaptchaToken: string): Promise<boolean> {
@@ -196,4 +203,19 @@ export const generateGateway = (providerId: string, region: string, address: str
 
 export const goodDomain = (domain: string): boolean => {
   return /^([a-z0-9]+(-[a-z0-9]+)*\.)+[a-z]{2,}$/.test(domain);
+};
+
+export const combinedKeySeparator = '-';
+export const combinedKeyIdLength = 8;
+export const combinedKeyPatt = new RegExp(`^(\\w{${combinedKeyIdLength}})${combinedKeySeparator}(\\w+)$`);
+
+export const generateCombinedApiKey = (key: string): string => {
+  return `${generateId().slice(0, combinedKeyIdLength)}${combinedKeySeparator}${key}`;
+};
+
+export const splitCombinedApiKey = (combinedKey: string): string[] => {
+  const matches = combinedKey.match(combinedKeyPatt);
+  if(!matches)
+    return [];
+  return [matches[1], matches[2]];
 };

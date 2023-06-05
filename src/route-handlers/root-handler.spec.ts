@@ -59,6 +59,7 @@ describe('RootHandler', function() {
       'ccDeletedNodes-test',
       'ccDeletedUserDomains-test',
       'ccRelayInvoices-test',
+      'ccApiKeys-test',
     );
     await db.initialize();
     dbUtils = new DBUtils(db);
@@ -499,6 +500,7 @@ describe('RootHandler', function() {
         'ccDeletedNodes-test',
         'ccDeletedUserDomains-test',
         'ccRelayInvoices-test',
+        'ccApiKeys-test',
       );
       await db.initialize();
       const secretManager = new SecretManager();

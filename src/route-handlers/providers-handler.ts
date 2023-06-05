@@ -8,7 +8,7 @@ import {
   goodBody,
   hashPassword,
   httpErrorResponse,
-  httpResponse
+  httpResponse, response403, splitCombinedApiKey
 } from '../util';
 import isPlainObject from 'lodash/isPlainObject';
 import isString from 'lodash/isString';
@@ -96,8 +96,8 @@ export interface Provider {
   id: string
   email: string
   name: string
-  keyHash: string
-  keySalt: string
+  // keyHash: string
+  // keySalt: string
   poktAddress: string
   agreeTos: boolean,
   agreeTosDate: string,
@@ -140,24 +140,31 @@ export class ProvidersHandler extends RouteHandler {
     if(!body || !goodBody(body, isPlainObject))
       return httpErrorResponse(400, 'Invalid body');
     const parsed = JSON.parse(body);
-    let { key } = parsed as ProviderUnlockPostBody;
-    if(!isString(key))
+    let { key: combinedKey } = parsed as ProviderUnlockPostBody;
+    if(!isString(combinedKey))
       return httpErrorResponse(400, 'key string required');
-    key = key.trim();
-    if(!key)
+    combinedKey = combinedKey.trim();
+    if(!combinedKey)
       return httpErrorResponse(400, 'valid key required');
     // @ts-ignore
     const { providerid: providerId } = pathParameters;
     const provider = await this._dbUtils.getProvider(providerId);
     if(!provider)
       return httpErrorResponse(401, 'invalid provider credentials');
-    const keyHash = hashPassword(key, provider.keySalt);
-    if(keyHash !== provider.keyHash)
+    const [ id, key ] = splitCombinedApiKey(combinedKey);
+    if(!id || !key)
+      return httpErrorResponse(401, 'invalid provider credentials');
+    const apiKey = await this._dbUtils.getApiKey(providerId, id);
+    if(!apiKey || apiKey.accountId !== providerId)
+      return httpErrorResponse(401, 'invalid provider credentials');
+    const keyHash = hashPassword(key, apiKey.salt);
+    if(keyHash !== apiKey.hash)
       return httpErrorResponse(401, 'invalid provider credentials');
     const newToken: SessionToken = {
       token: generateId(),
       user: provider.id,
       expiration: dayjs().add(1, 'day').toISOString(),
+      keyId: id,
     };
     await this._dbUtils.createSessionToken(newToken);
     return httpResponse(200, newToken);
@@ -167,21 +174,25 @@ export class ProvidersHandler extends RouteHandler {
     const { body, pathParameters } = event;
     // @ts-ignore
     const { providerid: providerId } = pathParameters;
-    const [ errResponse, provider ] = await getProviderAccountFromToken(this._db, event, providerId);
-    if(errResponse)
+    const [ errResponse, provider, apiKey ] = await getProviderAccountFromToken(this._db, event, providerId);
+    if(errResponse) {
       return errResponse;
-    else
-      return httpResponse(200, omit(provider, ['keySalt', 'keyHash']));
+    }
+    if(apiKey.level === 0)
+      return response403();
+    return httpResponse(200, omit(provider, ['keySalt', 'keyHash']));
   }
 
   async getProviderGateways(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
     const { body, pathParameters } = event;
     // @ts-ignore
     const { providerid: providerId } = pathParameters;
-    const [ errResponse, provider ] = await getProviderAccountFromToken(this._db, event, providerId);
+    const [ errResponse, provider, apiKey ] = await getProviderAccountFromToken(this._db, event, providerId);
     if(errResponse)
       return errResponse;
     const gateways = await this._dbUtils.getGatewaysByProvider(provider.id);
+    if(apiKey.level === 0)
+      return response403();
     return httpResponse(200, gateways);
   }
 
@@ -189,14 +200,14 @@ export class ProvidersHandler extends RouteHandler {
     const { body, pathParameters } = event;
     // @ts-ignore
     const { gatewayid: gatewayId, providerid: providerId } = pathParameters;
-    const [ errResponse, provider ] = await getProviderAccountFromToken(this._db, event, providerId);
+    const [ errResponse, provider, apiKey ] = await getProviderAccountFromToken(this._db, event, providerId);
     if(errResponse)
       return errResponse;
     const gateway = await this._dbUtils.getGateway(gatewayId);
     if(!gateway)
       return httpErrorResponse(404, 'gateway not found');
-    if(gateway.provider !== provider.id)
-      return httpErrorResponse(403, 'Forbidden');
+    if(gateway.provider !== provider.id || apiKey.level === 0)
+      return response403();
     return httpResponse(200, gateway);
   }
 
@@ -204,14 +215,14 @@ export class ProvidersHandler extends RouteHandler {
     const { body, pathParameters } = event;
     // @ts-ignore
     const { gatewayid: gatewayId, providerid: providerId } = pathParameters;
-    const [ errResponse, provider ] = await getProviderAccountFromToken(this._db, event, providerId);
+    const [ errResponse, provider, apiKey ] = await getProviderAccountFromToken(this._db, event, providerId);
     if(errResponse)
       return errResponse;
     const gateway = await this._dbUtils.getGateway(gatewayId);
     if(!gateway)
       return httpErrorResponse(404, 'gateway not found');
-    if(gateway.provider !== provider.id)
-      return httpErrorResponse(403, 'Forbidden');
+    if(gateway.provider !== provider.id || apiKey.level === 0)
+      return response403();
     const rpcEndpoints = await this._dbUtils.getRpcEndpointsByGateway(gatewayId);
     return httpResponse(200, rpcEndpoints);
   }
@@ -220,14 +231,14 @@ export class ProvidersHandler extends RouteHandler {
     const { body, pathParameters } = event;
     // @ts-ignore
     const { gatewayid: gatewayId, providerid: providerId } = pathParameters;
-    const [ errResponse, provider ] = await getProviderAccountFromToken(this._db, event, providerId);
+    const [ errResponse, provider, apiKey ] = await getProviderAccountFromToken(this._db, event, providerId);
     if(errResponse)
       return errResponse;
     const gateway = await this._dbUtils.getGateway(gatewayId);
     if(!gateway)
       return httpErrorResponse(404, 'gateway not found');
-    if(gateway.provider !== provider.id)
-      return httpErrorResponse(403, 'Forbidden');
+    if(gateway.provider !== provider.id || apiKey.level === 0 || apiKey.type !== 'GATEWAY')
+      return response403();
     const rpcEndpoints = await this._dbUtils.getRpcEndpointsByGateway(gatewayId);
     const chainIds = new Set(rpcEndpoints.map(rpcEndpoint => rpcEndpoint.chainId));
     const [ nodes, accounts ] = await Promise.all([
@@ -260,14 +271,14 @@ export class ProvidersHandler extends RouteHandler {
     const { body, pathParameters } = event;
     // @ts-ignore
     const { gatewayid: gatewayId, providerid: providerId } = pathParameters;
-    const [ errResponse, provider ] = await getProviderAccountFromToken(this._db, event, providerId);
+    const [ errResponse, provider, apiKey ] = await getProviderAccountFromToken(this._db, event, providerId);
     if(errResponse)
       return errResponse;
     const gateway = await this._dbUtils.getGateway(gatewayId);
     if(!gateway)
       return httpErrorResponse(404, 'gateway not found');
-    if(gateway.provider !== provider.id)
-      return httpErrorResponse(403, 'Forbidden');
+    if(gateway.provider !== provider.id || apiKey.level < 2 || apiKey.type !== 'GATEWAY')
+      return response403();
     if(!body || !goodBody(body, isPlainObject))
       return httpErrorResponse(400, 'Invalid body');
     const parsed = JSON.parse(body);
@@ -290,14 +301,14 @@ export class ProvidersHandler extends RouteHandler {
     const { body, pathParameters } = event;
     // @ts-ignore
     const { gatewayid: gatewayId, providerid: providerId } = pathParameters;
-    const [ errResponse, provider ] = await getProviderAccountFromToken(this._db, event, providerId);
+    const [ errResponse, provider, apiKey ] = await getProviderAccountFromToken(this._db, event, providerId);
     if(errResponse)
       return errResponse;
     const gateway = await this._dbUtils.getGateway(gatewayId);
     if(!gateway)
       return httpErrorResponse(404, 'gateway not found');
-    if(gateway.provider !== provider.id)
-      return httpErrorResponse(403, 'Forbidden');
+    if(gateway.provider !== provider.id || apiKey.level < 2 || apiKey.type !== 'GATEWAY')
+      return response403();
     if(!body || !goodBody(body, isPlainObject))
       return httpErrorResponse(400, 'Invalid body');
     const parsed = JSON.parse(body);
@@ -320,14 +331,14 @@ export class ProvidersHandler extends RouteHandler {
     const { body, pathParameters } = event;
     // @ts-ignore
     const { gatewayid: gatewayId, providerid: providerId } = pathParameters;
-    const [ errResponse, provider ] = await getProviderAccountFromToken(this._db, event, providerId);
+    const [ errResponse, provider, apiKey ] = await getProviderAccountFromToken(this._db, event, providerId);
     if(errResponse)
       return errResponse;
     const gateway = await this._dbUtils.getGateway(gatewayId);
     if(!gateway)
       return httpErrorResponse(404, 'gateway not found');
-    if(gateway.provider !== provider.id)
-      return httpErrorResponse(403, 'Forbidden');
+    if(gateway.provider !== provider.id || apiKey.level < 2 || apiKey.type !== 'GATEWAY')
+      return response403();
     if(!body || !goodBody(body, isPlainObject))
       return httpErrorResponse(400, 'Invalid body');
     const parsed = JSON.parse(body);

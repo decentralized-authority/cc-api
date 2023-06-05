@@ -1,6 +1,8 @@
-import 'should';
+import should from 'should';
 import {
-  createPoktAccount,
+  combinedKeyIdLength, combinedKeyPatt,
+  combinedKeySeparator,
+  createPoktAccount, generateCombinedApiKey,
   generateId,
   generateSalt,
   goodBody,
@@ -8,7 +10,7 @@ import {
   goodPassword,
   hashPassword,
   httpErrorResponse,
-  httpResponse, poktAddressFromPublicKey, sha256
+  httpResponse, poktAddressFromPublicKey, sha256, splitCombinedApiKey
 } from './util';
 import isString from 'lodash/isString';
 
@@ -158,6 +160,33 @@ describe('util', function() {
         account.address.should.be.a.String();
         /^[0123456789abcdef]{40}$/.test(account.address).should.be.True();
       }
+    });
+  });
+
+  const apiKey = generateId();
+  let apiKeyId = '';
+  let combinedKey = '';
+
+  describe('generateCombinedApiKey()', function() {
+    it('should generate a combined API key', function() {
+      combinedKey = generateCombinedApiKey(apiKey);
+      should(combinedKey).be.a.String();
+      const splitKey = combinedKey.split(combinedKeySeparator);
+      splitKey.length.should.equal(2);
+      apiKeyId = splitKey[0];
+      splitKey[0].length.should.equal(combinedKeyIdLength);
+      splitKey[1].should.equal(apiKey);
+      combinedKeyPatt.test(combinedKey).should.be.True();
+    });
+  });
+
+  describe('splitCombinedApiKey()', function() {
+    it('should split a combined API key into the id and key', function () {
+      const splitKey = splitCombinedApiKey(combinedKey);
+      should(splitKey).be.an.Array();
+      splitKey.length.should.equal(2);
+      splitKey[0].should.equal(apiKeyId);
+      splitKey[1].should.equal(apiKey);
     });
   });
 

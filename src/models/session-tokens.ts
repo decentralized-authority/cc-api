@@ -15,5 +15,7 @@ export const createSessionTokenModel = (tableName: string) => dynogels.define('S
     user: Joi.string(),
     // @ts-ignore
     expiration: Joi.string(),
+    // @ts-ignore
+    keyId: Joi.string(),
   },
 });

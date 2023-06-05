@@ -394,9 +394,10 @@ export class AccountsHandler extends RouteHandler {
     const relayInvoices = await this._dbUtils.getRelayInvoicesByUser(account.id, count);
     return httpResponse(200, relayInvoices
       .map((invoice) => {
+        const { relays = [] } = invoice;
         return {
           ...omit(invoice, ['providersPaid', 'ccPaid']),
-          relays: invoice.relays
+          relays: relays
             .map((relayInvoiceRelays) => {
               return omit(relayInvoiceRelays, ['providerBreakdown']);
             }),

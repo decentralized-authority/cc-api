@@ -1,5 +1,6 @@
 import { DB } from './db';
 import {
+  ApiKey,
   Chain,
   Node,
   ChainHost,
@@ -850,6 +851,44 @@ export class DBUtils {
             }));
           }
         });
+    });
+  }
+
+  createApiKey(apiKey: ApiKey): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      this.db.ApiKeys.create(apiKey, err => {
+        if(err)
+          reject(err);
+        else
+          resolve(true);
+      });
+    });
+  }
+
+  getApiKey(accountId: string, id: string): Promise<ApiKey|null> {
+    return new Promise((resolve, reject) => {
+      this.db.ApiKeys.get({accountId, id}, (err, res) => {
+        if(err) {
+          reject(err);
+        } else if(res) {
+          // @ts-ignore
+          const attrs = res.attrs as ApiKey;
+          resolve(attrs);
+        } else {
+          resolve(null);
+        }
+      });
+    });
+  }
+
+  deleteApiKey(accountId: string, id: string): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      this.db.ApiKeys.destroy({accountId, id}, err => {
+        if(err)
+          reject(err);
+        else
+          resolve(true);
+      });
     });
   }
 

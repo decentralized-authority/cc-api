@@ -46,6 +46,7 @@ describe('AccountsHandler', function () {
       'ccDeletedNodes-test',
       'ccDeletedUserDomains-test',
       'ccRelayInvoices-test',
+      'ccApiKeys-test',
     );
     await db.initialize();
     dbUtils = new DBUtils(db);
@@ -97,6 +98,8 @@ describe('AccountsHandler', function () {
         date: dayjs().subtract(1, 'day').valueOf(),
         total: '1010',
         relays: [],
+        providersPaid: false,
+        ccPaid: false,
       },
       {
         id: generateId(),
@@ -104,6 +107,8 @@ describe('AccountsHandler', function () {
         date: dayjs().valueOf(),
         total: '1000',
         relays: [],
+        providersPaid: false,
+        ccPaid: false,
       },
       {
         id: generateId(),
@@ -111,6 +116,8 @@ describe('AccountsHandler', function () {
         date: dayjs().subtract(3, 'days').valueOf(),
         total: '1030',
         relays: [],
+        providersPaid: false,
+        ccPaid: false,
       },
       {
         id: generateId(),
@@ -118,6 +125,8 @@ describe('AccountsHandler', function () {
         date: dayjs().subtract(2, 'days').valueOf(),
         total: '1020',
         relays: [],
+        providersPaid: false,
+        ccPaid: false,
       },
     ];
     await Promise.all(relayInvoices.map((invoice) => dbUtils.createRelayInvoice(invoice)));
