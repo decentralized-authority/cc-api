@@ -1,6 +1,6 @@
 {
   "name": "cc-api",
-  "version": "0.9.6",
+  "version": "0.10.0",
   "description": "cc-api",
   "main": "./lib/index.js",
   "scripts": {
