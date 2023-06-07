@@ -17,7 +17,7 @@ import {
 import { DBUtils } from '../db-utils';
 import { SessionToken } from './root-handler';
 import dayjs from 'dayjs';
-import { ApiKey, Node, RpcEndpoint } from '../interfaces';
+import { ApiKey, GeneralRelayLog, Node, ProviderPayment, RpcEndpoint } from '../interfaces';
 import { Account } from './accounts-handler';
 
 describe('ProvidersHandler', function() {
@@ -37,6 +37,8 @@ describe('ProvidersHandler', function() {
   let users: Account[] = [];
   let apiKey: ApiKey;
   let combinedKey: string;
+  let providerPayments: ProviderPayment[];
+  let generalRelayLogs: GeneralRelayLog[];
 
   before(async function() {
     db = new DB(
@@ -56,6 +58,8 @@ describe('ProvidersHandler', function() {
       'ccDeletedUserDomains-test',
       'ccRelayInvoices-test',
       'ccApiKeys-test',
+      'ccGeneralRelayLogs-test',
+      'ccProviderPayments-test',
     );
     await db.initialize();
     dbUtils = new DBUtils(db);
@@ -174,6 +178,31 @@ describe('ProvidersHandler', function() {
     }
 
     await Promise.all(users.map((user) => dbUtils.createAccount(user)));
+
+    providerPayments = await Promise.all(gateways.map(async (gateway) => {
+      const payment: ProviderPayment = {
+        provider: gateway.provider,
+        id: generateId(),
+        invoices: [],
+        date: dayjs.utc().subtract(1, 'day').valueOf(),
+        total: '1',
+        relays: [],
+      };
+      await dbUtils.createProviderPayment(payment);
+      return payment;
+    }));
+
+    generalRelayLogs = await Promise.all(gateways.map(async (gateway) => {
+      const log: GeneralRelayLog = {
+        gateway: gateway.id,
+        start: dayjs.utc().subtract(25, 'hours').valueOf(),
+        end: dayjs.utc().subtract(24, 'hours').valueOf(),
+        time: dayjs.utc().subtract(24, 'hours').valueOf(),
+        relays: {},
+      };
+      await dbUtils.createGeneralRelayLog(log);
+      return log;
+    }));
 
   });
 
@@ -321,6 +350,126 @@ describe('ProvidersHandler', function() {
         parsed.id.should.equal(provider.id);
         parsed.email.should.equal(provider.email);
         parsed.poktAddress.should.equal(provider.poktAddress);
+      }
+    });
+  });
+
+  describe('.postProviderGeneralRelayLogs()', function() {
+    it('should get a provider\'s recent general relay logs', async function() {
+      const times: [number, number, number][] = [
+        [
+          dayjs.utc().subtract(26, 'hours').valueOf(),
+          dayjs.utc().subtract(25, 'hours').valueOf(),
+          0,
+        ],
+        [
+          dayjs.utc().subtract(2, 'hours').valueOf(),
+          dayjs.utc().subtract(1, 'hours').valueOf(),
+          0,
+        ],
+        [
+          dayjs.utc().subtract(25, 'hours').valueOf(),
+          dayjs.utc().subtract(6, 'hours').valueOf(),
+          generalRelayLogs.length,
+        ],
+        [
+          0,
+          0,
+          generalRelayLogs.length,
+        ],
+        [
+          dayjs.utc().subtract(25, 'hours').valueOf(),
+          0,
+          generalRelayLogs.length,
+        ],
+        [
+          0,
+          dayjs.utc().subtract(23, 'hours').valueOf(),
+          generalRelayLogs.length,
+        ],
+      ];
+      for(const [ startTime, endTime, length ] of times) {
+        let body: any = {};
+        if(startTime)
+          body.startTime = startTime;
+        if(endTime)
+          body.endTime = endTime;
+        // @ts-ignore
+        const res = await providersHandler.postProviderGeneralRelayLogs({
+          resource: '',
+          httpMethod: '',
+          pathParameters: {
+            providerid: provider.id,
+          },
+          headers: {'x-api-key': sessionToken.token},
+          body: JSON.stringify(body),
+        });
+        res.should.be.an.Object();
+        res.statusCode.should.equal(200);
+        res.body.should.be.a.String();
+        const parsed = JSON.parse(res.body);
+        parsed.should.be.an.Array();
+        parsed.length.should.equal(length);
+      }
+    });
+  });
+
+  describe('.postProviderPaymentReceipts()', function() {
+    it('should get a provider\'s recent payment receipts', async function() {
+      const times: [number, number, number][] = [
+        [
+          dayjs.utc().subtract(26, 'hours').valueOf(),
+          dayjs.utc().subtract(25, 'hours').valueOf(),
+          0,
+        ],
+        [
+          dayjs.utc().subtract(2, 'hours').valueOf(),
+          dayjs.utc().subtract(1, 'hours').valueOf(),
+          0,
+        ],
+        [
+          dayjs.utc().subtract(25, 'hours').valueOf(),
+          dayjs.utc().subtract(6, 'hours').valueOf(),
+          providerPayments.length,
+        ],
+        [
+          0,
+          0,
+          providerPayments.length,
+        ],
+        [
+          dayjs.utc().subtract(25, 'hours').valueOf(),
+          0,
+          providerPayments.length,
+        ],
+        [
+          0,
+          dayjs.utc().subtract(23, 'hours').valueOf(),
+          providerPayments.length,
+        ],
+      ];
+      for(const [ startTime, endTime, length ] of times) {
+        let body: any = {};
+        if(startTime)
+          body.startTime = startTime;
+        if(endTime)
+          body.endTime = endTime;
+        // @ts-ignore
+        const res = await providersHandler.postProviderPaymentReceipts({
+          resource: '',
+          httpMethod: '',
+          pathParameters: {
+            providerid: provider.id,
+          },
+          headers: {'x-api-key': sessionToken.token},
+          body: JSON.stringify(body),
+        });
+        res.should.be.an.Object();
+        res.statusCode.should.equal(200);
+        res.body.should.be.a.String();
+        const parsed = JSON.parse(res.body);
+        parsed.should.be.an.Array();
+        parsed.length.should.equal(length);
       }
     });
   });
@@ -555,6 +704,8 @@ describe('ProvidersHandler', function() {
     await Promise.all([...rpcEndpoints, ...otherRpcEndpoints].map(rpcEndpoint => dbUtils.deleteRpcEndpoint(rpcEndpoint.id)));
     await Promise.all(nodes.map(node => dbUtils.deleteNode(node.id)));
     await Promise.all(users.map((user) => dbUtils.deleteAccount(user.id)));
+    await Promise.all(providerPayments.map((providerPayment) => dbUtils.deleteProviderPayment(providerPayment.provider, providerPayment.date)));
+    await Promise.all(generalRelayLogs.map((generalRelayLog) => dbUtils.deleteGeneralRelayLog(generalRelayLog.gateway, generalRelayLog.time)));
   });
 
 });

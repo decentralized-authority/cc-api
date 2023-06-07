@@ -41,6 +41,8 @@ describe('ChainsHandler', function() {
       'ccDeletedUserDomains-test',
       'ccRelayInvoices-test',
       'ccApiKeys-test',
+      'ccGeneralRelayLogs-test',
+      'ccProviderPayments-test',
     );
     await db.initialize();
     dbUtils = new DBUtils(db);

@@ -25,12 +25,17 @@ export const routes = {
   CHAINS: '/v1/chains',
   CHAIN: '/v1/chains/{id}',
 
+  // Provider User Routes
   PROVIDER_UNLOCK: '/v1/providers/{providerid}/unlock',
   PROVIDER: '/v1/providers/{providerid}',
+  PROVIDER_GENERAL_RELAY_LOGS: '/v1/providers/{providerid}/general-relay-logs',
+  PROVIDER_PAYMENT_RECIEPTS: '/v1/providers/{providerid}/payment-receipts',
   PROVIDER_GATEWAYS: '/v1/providers/{providerid}/gateways',
   PROVIDER_GATEWAY: '/v1/providers/{providerid}/gateways/{gatewayid}',
-  PROVIDER_GATEWAY_HOSTS: '/v1/providers/{providerid}/gateways/{gatewayid}/hosts',
   PROVIDER_GATEWAY_RPC_ENDPOINTS: '/v1/providers/{providerid}/gateways/{gatewayid}/rpc-endpoints',
+
+  // Provider Gateway Routes
+  PROVIDER_GATEWAY_HOSTS: '/v1/providers/{providerid}/gateways/{gatewayid}/hosts',
   PROVIDER_GATEWAY_ERROR_LOG: '/v1/providers/{providerid}/gateways/{gatewayid}/error-log',
   PROVIDER_GATEWAY_INFO_LOG: '/v1/providers/{providerid}/gateways/{gatewayid}/info-log',
   PROVIDER_GATEWAY_SERVER_NOTICE_LOG: '/v1/providers/{providerid}/gateways/{gatewayid}/server-notice-log',

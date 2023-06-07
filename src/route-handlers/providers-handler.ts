@@ -8,18 +8,22 @@ import {
   goodBody,
   hashPassword,
   httpErrorResponse,
-  httpResponse, response403, splitCombinedApiKey
+  httpResponse, response400, response403, splitCombinedApiKey
 } from '../util';
 import isPlainObject from 'lodash/isPlainObject';
 import isString from 'lodash/isString';
 import { SessionToken } from './root-handler';
 import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
 import omit from 'lodash/omit';
-import { ChainHost, GatewayHosts } from '../interfaces';
+import { ChainHost, GatewayHosts, GeneralRelayLog, ProviderPayment } from '../interfaces';
 import winston from 'winston';
 import WinstonCloudwatch from 'winston-cloudwatch';
 import isArray from 'lodash/isArray';
 import bindAll from 'lodash/bindAll';
+import isNumber from 'lodash/isNumber';
+
+dayjs.extend(utc);
 
 const logger = async function(logs: string[], gateway: Gateway, logGroupName: string, isError: boolean): Promise<boolean> {
   let logger: winston.Logger;
@@ -111,6 +115,14 @@ export interface ProviderUnlockPostBody {
 
 export interface ProviderGatewayErrorLogPostBody {
   logs: string[]
+}
+export interface ProviderGeneralRelayLogsPostBody {
+  startTime: number
+  endTime: number
+}
+export interface ProviderPaymentReceiptsPostBody {
+  startTime: number
+  endTime: number
 }
 
 export class ProvidersHandler extends RouteHandler {
@@ -355,6 +367,85 @@ export class ProvidersHandler extends RouteHandler {
       return httpErrorResponse(500, 'CC_GATEWAY_ERROR_SERVER_NOTICE_LOG_GROUP_NAME not set');
     const success = await logger(preppedLogs, gateway, process.env.CC_GATEWAY_SERVER_NOTICE_LOG_GROUP_NAME, false);
     return httpResponse(200, success);
+  }
+
+  async postProviderGeneralRelayLogs(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+    const { body = '{}', pathParameters } = event;
+    // @ts-ignore
+    const { providerid: providerId } = pathParameters;
+    const [ errResponse, provider, apiKey ] = await getProviderAccountFromToken(this._db, event, providerId);
+    if(errResponse) {
+      return errResponse;
+    }
+    if(apiKey.level < 1)
+      return response403();
+    if(!body || !goodBody(body, isPlainObject))
+      return httpErrorResponse(400, 'Invalid body');
+    const parsed = JSON.parse(body);
+    let { startTime, endTime } = parsed as ProviderGeneralRelayLogsPostBody;
+    if((startTime && !isNumber(startTime)) || (endTime && !isNumber(endTime))) {
+      return response400('startTime and endTime must be numbers');
+    }
+    endTime = endTime || dayjs.utc().valueOf();
+    startTime = startTime || dayjs.utc(endTime).subtract(7, 'day').valueOf();
+    const gateways = await this._dbUtils.getGatewaysByProvider(provider.id);
+
+    const logs = await new Promise<GeneralRelayLog[]>((resolve, reject) => {
+      this._db.GeneralRelayLogs
+        .scan()
+        .loadAll()
+        .where('gateway').in(gateways.map(g => g.id))
+        .where('time').between(startTime, endTime)
+        .exec((err, res) => {
+          if(err) {
+            reject(err);
+          } else {
+            const { Items } = res;
+            resolve(Items.map((i: { attrs: any; }) => {
+              return i.attrs;
+            }));
+          }
+        });
+    });
+
+    return httpResponse(200, logs);
+  }
+
+  async postProviderPaymentReceipts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+    const { body = '{}', pathParameters } = event;
+    // @ts-ignore
+    const { providerid: providerId } = pathParameters;
+    const [ errResponse, provider, apiKey ] = await getProviderAccountFromToken(this._db, event, providerId);
+    if(errResponse) {
+      return errResponse;
+    }
+    if(apiKey.level < 1)
+      return response403();
+    if(!body || !goodBody(body, isPlainObject))
+      return httpErrorResponse(400, 'Invalid body');
+    const parsed = JSON.parse(body);
+    let { startTime, endTime } = parsed as ProviderPaymentReceiptsPostBody;
+    if((startTime && !isNumber(startTime)) || (endTime && !isNumber(endTime))) {
+      return response400('startTime and endTime must be numbers');
+    }
+    endTime = endTime || dayjs.utc().valueOf();
+    startTime = startTime || dayjs.utc(endTime).subtract(7, 'day').valueOf();
+
+    const payments = await new Promise<ProviderPayment[]>((resolve, reject) => {
+      this._dbUtils.db.ProviderPayments
+        .query(provider.id)
+        .where('date').between(startTime, endTime)
+        .loadAll()
+        .exec((err, { Items }) => {
+          if(err) {
+            reject(err);
+          } else {
+            resolve(Items.map((item: {attrs: ProviderPayment}) => item.attrs));
+          }
+        });
+    });
+
+    return httpResponse(200, payments);
   }
 
 }

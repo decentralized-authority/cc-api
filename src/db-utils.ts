@@ -8,7 +8,7 @@ import {
   RpcEndpoint,
   UserChainHost,
   UserDomain,
-  DeletedUserDomain, DeletedNode, RelayInvoice
+  DeletedUserDomain, DeletedNode, RelayInvoice, GeneralRelayLog, ProviderPayment
 } from './interfaces';
 import { Gateway, Provider } from './route-handlers/providers-handler';
 import { SessionToken } from './route-handlers/root-handler';
@@ -884,6 +884,50 @@ export class DBUtils {
   deleteApiKey(accountId: string, id: string): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
       this.db.ApiKeys.destroy({accountId, id}, err => {
+        if(err)
+          reject(err);
+        else
+          resolve(true);
+      });
+    });
+  }
+
+  createGeneralRelayLog(log: GeneralRelayLog): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      this.db.GeneralRelayLogs.create(log, err => {
+        if(err)
+          reject(err);
+        else
+          resolve(true);
+      });
+    });
+  }
+
+  deleteGeneralRelayLog(gateway: string, time: number): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      this.db.GeneralRelayLogs.destroy({gateway, time}, err => {
+        if(err)
+          reject(err);
+        else
+          resolve(true);
+      });
+    });
+  }
+
+  createProviderPayment(payment: ProviderPayment): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      this.db.ProviderPayments.create(payment, err => {
+        if(err)
+          reject(err);
+        else
+          resolve(true);
+      });
+    });
+  }
+
+  deleteProviderPayment(provider: string, date: number): Promise<boolean> {
+    return new Promise<boolean>((resolve, reject) => {
+      this.db.ProviderPayments.destroy({provider, date}, err => {
         if(err)
           reject(err);
         else

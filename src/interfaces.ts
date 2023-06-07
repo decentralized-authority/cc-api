@@ -112,3 +112,32 @@ export interface ApiKey {
   type: "GATEWAY"|"USER"
   level: number // 0 - no access, 1 - read, 2 - read/write
 }
+
+export interface GeneralRelayLog {
+  gateway: string
+  time: number
+  start: number
+  end: number
+  relays: {[chainId: string]: number}
+}
+
+export interface PaymentRelays {
+  chain: string                           // relay chain id
+  relays: string                          // number of relays for chain
+  percent: number                         // provider percentage of rewards e.g. 10% at this point
+  reward: string                          // calculated provider payment amount in uPOKT
+  breakdown: {[region: string]: string}   // breakdown of rewards by region i.e. region -> number of relays
+}
+
+export interface CCPayment {
+  id: string                              // payment id
+  invoices: string[]                       // user invoice ids
+  date: number                            // payment date
+  total: string                           // payment total in uPOKT
+  txid?: string                            // POKT txid
+  relays: PaymentRelays[]                 // relay payment breakdowns
+}
+
+export interface ProviderPayment extends CCPayment {
+  provider: string                        // provider id
+}

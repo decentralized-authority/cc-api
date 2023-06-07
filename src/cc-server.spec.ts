@@ -36,6 +36,8 @@ describe('CCServer', function() {
       'ccDeletedUserDomains-test',
       'ccRelayInvoices-test',
       'ccApiKeys-test',
+      'ccGeneralRelayLogs-test',
+      'ccProviderPayments-test',
     );
     dbUtils = new DBUtils(db);
   });
