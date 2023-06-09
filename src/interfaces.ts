@@ -141,3 +141,11 @@ export interface CCPayment {
 export interface ProviderPayment extends CCPayment {
   provider: string                        // provider id
 }
+
+export interface ProviderPaymentReceipt {
+  id: string                              // payment id
+  date: string                            // payment date
+  total: string                           // payment total in uPOKT
+  txid: string                           // POKT txid
+  relays: PaymentRelays[]                 // relay payment breakdowns
+}

@@ -16,7 +16,7 @@ import { SessionToken } from './root-handler';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import omit from 'lodash/omit';
-import { ChainHost, GatewayHosts, GeneralRelayLog, ProviderPayment } from '../interfaces';
+import { ChainHost, GatewayHosts, ProviderPayment, ProviderPaymentReceipt } from '../interfaces';
 import winston from 'winston';
 import WinstonCloudwatch from 'winston-cloudwatch';
 import isArray from 'lodash/isArray';
@@ -478,8 +478,18 @@ export class ProvidersHandler extends RouteHandler {
           }
         });
     });
+    const receipts: ProviderPaymentReceipt[] = payments
+      .map((payment) => {
+        return {
+          id: payment.id,
+          date: dayjs.utc(payment.date).toISOString(),
+          total: payment.total,
+          txid: payment.txid || '',
+          relays: payment.relays,
+        };
+      });
 
-    return httpResponse(200, payments);
+    return httpResponse(200, receipts);
   }
 
 }
