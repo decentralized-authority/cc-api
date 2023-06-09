@@ -224,12 +224,12 @@ const postAccountRelayInvoicesBody: AccountRelayInvoicesPostBody = {
   count: 0,
 };
 const postProviderGeneralRelayLogsBody: ProviderGeneralRelayLogsPostBody = {
-  startTime: 0,
-  endTime: 0,
+  startTime: '',
+  endTime: '',
 };
 const postProviderPaymentReceiptsBody: ProviderPaymentReceiptsPostBody = {
-  startTime: 0,
-  endTime: 0,
+  startTime: '',
+  endTime: '',
 };
 
 server

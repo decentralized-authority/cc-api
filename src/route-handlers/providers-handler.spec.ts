@@ -360,20 +360,26 @@ describe('ProvidersHandler', function() {
 
   describe('.postProviderGeneralRelayLogs()', function() {
     it('should get a provider\'s recent general relay logs', async function() {
-      const times: [number, number, number][] = [
+      const times: [number|string, number|string, number][] = [
         [
-          dayjs.utc().subtract(26, 'hours').valueOf(),
-          dayjs.utc().subtract(25, 'hours').valueOf(),
+          dayjs.utc().subtract(26, 'hours').toISOString(),
+          dayjs.utc().subtract(25, 'hours').toISOString(),
+          // dayjs.utc().subtract(26, 'hours').valueOf(),
+          // dayjs.utc().subtract(25, 'hours').valueOf(),
           0,
         ],
         [
-          dayjs.utc().subtract(2, 'hours').valueOf(),
-          dayjs.utc().subtract(1, 'hours').valueOf(),
+          dayjs.utc().subtract(2, 'hours').toISOString(),
+          dayjs.utc().subtract(1, 'hours').toISOString(),
+          // dayjs.utc().subtract(2, 'hours').valueOf(),
+          // dayjs.utc().subtract(1, 'hours').valueOf(),
           0,
         ],
         [
-          dayjs.utc().subtract(25, 'hours').valueOf(),
-          dayjs.utc().subtract(6, 'hours').valueOf(),
+          dayjs.utc().subtract(25, 'hours').toISOString(),
+          dayjs.utc().subtract(6, 'hours').toISOString(),
+          // dayjs.utc().subtract(25, 'hours').valueOf(),
+          // dayjs.utc().subtract(6, 'hours').valueOf(),
           generalRelayLogs.length,
         ],
         [
@@ -382,13 +388,15 @@ describe('ProvidersHandler', function() {
           generalRelayLogs.length,
         ],
         [
-          dayjs.utc().subtract(25, 'hours').valueOf(),
+          dayjs.utc().subtract(25, 'hours').toISOString(),
+          // dayjs.utc().subtract(25, 'hours').valueOf(),
           0,
           generalRelayLogs.length,
         ],
         [
           0,
-          dayjs.utc().subtract(23, 'hours').valueOf(),
+          dayjs.utc().subtract(23, 'hours').toISOString(),
+          // dayjs.utc().subtract(23, 'hours').valueOf(),
           generalRelayLogs.length,
         ],
       ];
@@ -420,20 +428,26 @@ describe('ProvidersHandler', function() {
 
   describe('.postProviderGeneralRelayCounts()', function() {
     it('should get a provider\'s recent general relay logs', async function() {
-      const times: [number, number, number][] = [
+      const times: [number|string, number|string, number][] = [
         [
-          dayjs.utc().subtract(26, 'hours').valueOf(),
-          dayjs.utc().subtract(25, 'hours').valueOf(),
+          dayjs.utc().subtract(26, 'hours').toISOString(),
+          dayjs.utc().subtract(25, 'hours').toISOString(),
+          // dayjs.utc().subtract(26, 'hours').valueOf(),
+          // dayjs.utc().subtract(25, 'hours').valueOf(),
           0,
         ],
         [
-          dayjs.utc().subtract(2, 'hours').valueOf(),
-          dayjs.utc().subtract(1, 'hours').valueOf(),
+          dayjs.utc().subtract(2, 'hours').toISOString(),
+          dayjs.utc().subtract(1, 'hours').toISOString(),
+          // dayjs.utc().subtract(2, 'hours').valueOf(),
+          // dayjs.utc().subtract(1, 'hours').valueOf(),
           0,
         ],
         [
-          dayjs.utc().subtract(25, 'hours').valueOf(),
-          dayjs.utc().subtract(6, 'hours').valueOf(),
+          dayjs.utc().subtract(25, 'hours').toISOString(),
+          dayjs.utc().subtract(6, 'hours').toISOString(),
+          // dayjs.utc().subtract(25, 'hours').valueOf(),
+          // dayjs.utc().subtract(6, 'hours').valueOf(),
           3,
         ],
         [
@@ -442,13 +456,15 @@ describe('ProvidersHandler', function() {
           3,
         ],
         [
-          dayjs.utc().subtract(25, 'hours').valueOf(),
+          dayjs.utc().subtract(25, 'hours').toISOString(),
+          // dayjs.utc().subtract(25, 'hours').valueOf(),
           0,
           3,
         ],
         [
           0,
-          dayjs.utc().subtract(23, 'hours').valueOf(),
+          dayjs.utc().subtract(23, 'hours').toISOString(),
+          // dayjs.utc().subtract(23, 'hours').valueOf(),
           3,
         ],
       ];
@@ -483,20 +499,26 @@ describe('ProvidersHandler', function() {
 
   describe('.postProviderPaymentReceipts()', function() {
     it('should get a provider\'s recent payment receipts', async function() {
-      const times: [number, number, number][] = [
+      const times: [number|string, number|string, number][] = [
         [
-          dayjs.utc().subtract(26, 'hours').valueOf(),
-          dayjs.utc().subtract(25, 'hours').valueOf(),
+          dayjs.utc().subtract(26, 'hours').toISOString(),
+          dayjs.utc().subtract(25, 'hours').toISOString(),
+          // dayjs.utc().subtract(26, 'hours').valueOf(),
+          // dayjs.utc().subtract(25, 'hours').valueOf(),
           0,
         ],
         [
-          dayjs.utc().subtract(2, 'hours').valueOf(),
-          dayjs.utc().subtract(1, 'hours').valueOf(),
+          dayjs.utc().subtract(2, 'hours').toISOString(),
+          dayjs.utc().subtract(1, 'hours').toISOString(),
+          // dayjs.utc().subtract(2, 'hours').valueOf(),
+          // dayjs.utc().subtract(1, 'hours').valueOf(),
           0,
         ],
         [
-          dayjs.utc().subtract(25, 'hours').valueOf(),
-          dayjs.utc().subtract(6, 'hours').valueOf(),
+          dayjs.utc().subtract(25, 'hours').toISOString(),
+          dayjs.utc().subtract(6, 'hours').toISOString(),
+          // dayjs.utc().subtract(25, 'hours').valueOf(),
+          // dayjs.utc().subtract(6, 'hours').valueOf(),
           providerPayments.length,
         ],
         [
@@ -505,13 +527,15 @@ describe('ProvidersHandler', function() {
           providerPayments.length,
         ],
         [
-          dayjs.utc().subtract(25, 'hours').valueOf(),
+          dayjs.utc().subtract(25, 'hours').toISOString(),
+          // dayjs.utc().subtract(25, 'hours').valueOf(),
           0,
           providerPayments.length,
         ],
         [
           0,
-          dayjs.utc().subtract(23, 'hours').valueOf(),
+          dayjs.utc().subtract(23, 'hours').toISOString(),
+          // dayjs.utc().subtract(23, 'hours').valueOf(),
           providerPayments.length,
         ],
       ];

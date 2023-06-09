@@ -117,12 +117,12 @@ export interface ProviderGatewayErrorLogPostBody {
   logs: string[]
 }
 export interface ProviderGeneralRelayLogsPostBody {
-  startTime: number
-  endTime: number
+  startTime: number|string
+  endTime: number|string
 }
 export interface ProviderPaymentReceiptsPostBody {
-  startTime: number
-  endTime: number
+  startTime: number|string
+  endTime: number|string
 }
 
 export class ProvidersHandler extends RouteHandler {
@@ -386,12 +386,24 @@ export class ProvidersHandler extends RouteHandler {
       return httpErrorResponse(400, 'Invalid body');
     const parsed = JSON.parse(body);
     let { startTime, endTime } = parsed as ProviderGeneralRelayLogsPostBody;
-    if((startTime && !isNumber(startTime)) || (endTime && !isNumber(endTime))) {
-      return response400('startTime and endTime must be numbers');
+    if((startTime && !isNumber(startTime) && !isString(startTime)) || (endTime && !isNumber(endTime) && !isString(endTime))) {
+      return response400('startTime and endTime must be numbers or strings');
+    }
+    if(startTime && isString(startTime)) {
+      startTime = dayjs(startTime).valueOf();
+      if(!startTime)
+        return response400('Invalid startTime');
+    }
+    if(endTime && isString(endTime)) {
+      endTime = dayjs(endTime).valueOf();
+      if(!endTime)
+        return response400('Invalid endTime');
     }
     endTime = endTime || dayjs.utc().valueOf();
     startTime = startTime || dayjs.utc(endTime).subtract(7, 'day').valueOf();
-    const logs = await this._dbUtils.getGeneralRelayLogsByProvider(provider.id, startTime, endTime);
+    const endTimeNum = endTime as number;
+    const startTimeNum = startTime as number;
+    const logs = await this._dbUtils.getGeneralRelayLogsByProvider(provider.id, startTimeNum, endTimeNum);
     return httpResponse(200, logs);
   }
 
@@ -409,12 +421,24 @@ export class ProvidersHandler extends RouteHandler {
       return httpErrorResponse(400, 'Invalid body');
     const parsed = JSON.parse(body);
     let { startTime, endTime } = parsed as ProviderGeneralRelayLogsPostBody;
-    if((startTime && !isNumber(startTime)) || (endTime && !isNumber(endTime))) {
-      return response400('startTime and endTime must be numbers');
+    if((startTime && !isNumber(startTime) && !isString(startTime)) || (endTime && !isNumber(endTime) && !isString(endTime))) {
+      return response400('startTime and endTime must be either numbers or strings');
+    }
+    if(startTime && isString(startTime)) {
+      startTime = dayjs(startTime).valueOf();
+      if(!startTime)
+        return response400('Invalid startTime');
+    }
+    if(endTime && isString(endTime)) {
+      endTime = dayjs(endTime).valueOf();
+      if(!endTime)
+        return response400('Invalid endTime');
     }
     endTime = endTime || dayjs.utc().valueOf();
     startTime = startTime || dayjs.utc(endTime).subtract(7, 'day').valueOf();
-    const logs = await this._dbUtils.getGeneralRelayLogsByProvider(provider.id, startTime, endTime);
+    const endTimeNum = endTime as number;
+    const startTimeNum = startTime as number;
+    const logs = await this._dbUtils.getGeneralRelayLogsByProvider(provider.id, startTimeNum, endTimeNum);
     const gateways = await this._dbUtils.getGatewaysByProvider(provider.id);
     const gatewayToRegion: { [gateway: string]: string } = {};
     for(const gateway of gateways) {
@@ -464,8 +488,18 @@ export class ProvidersHandler extends RouteHandler {
       return httpErrorResponse(400, 'Invalid body');
     const parsed = JSON.parse(body);
     let { startTime, endTime } = parsed as ProviderPaymentReceiptsPostBody;
-    if((startTime && !isNumber(startTime)) || (endTime && !isNumber(endTime))) {
-      return response400('startTime and endTime must be numbers');
+    if((startTime && !isNumber(startTime) && !isString(startTime)) || (endTime && !isNumber(endTime) && !isString(endTime))) {
+      return response400('startTime and endTime must be numbers or strings');
+    }
+    if(startTime && isString(startTime)) {
+      startTime = dayjs(startTime).valueOf();
+      if(!startTime)
+        return response400('Invalid startTime');
+    }
+    if(endTime && isString(endTime)) {
+      endTime = dayjs(endTime).valueOf();
+      if(!endTime)
+        return response400('Invalid endTime');
     }
     endTime = endTime || dayjs.utc().valueOf();
     startTime = startTime || dayjs.utc(endTime).subtract(7, 'day').valueOf();
