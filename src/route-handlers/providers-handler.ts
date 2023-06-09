@@ -137,6 +137,9 @@ export class ProvidersHandler extends RouteHandler {
     bindAll(this, [
       'postProviderUnlock',
       'getProvider',
+      'postProviderGeneralRelayLogs',
+      'postProviderGeneralRelayCounts',
+      'postProviderPaymentReceipts',
       'getProviderGateways',
       'getProviderGateway',
       'getProviderGatewayRpcEndpoints',
