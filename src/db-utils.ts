@@ -528,6 +528,21 @@ export class DBUtils {
     });
   }
 
+  getProviders(): Promise<Provider[]> {
+    return new Promise((resolve, reject) => {
+      this.db.Providers
+        .scan()
+        .loadAll()
+        .exec((err, { Items }) => {
+          if(err) {
+            reject(err);
+          } else {
+            resolve(Items.map((i: { attrs: any; }) => i.attrs));
+          }
+        });
+    });
+  }
+
   getProvider(id: string): Promise<Provider|null> {
     return new Promise((resolve, reject) => {
       this.db.Providers.get({id}, (err, res) => {
