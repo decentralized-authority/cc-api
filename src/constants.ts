@@ -29,6 +29,7 @@ export const routes = {
   PROVIDER_UNLOCK: '/v1/providers/{providerid}/unlock',
   PROVIDER: '/v1/providers/{providerid}',
   PROVIDER_GENERAL_RELAY_LOGS: '/v1/providers/{providerid}/general-relay-logs',
+  PROVIDER_GENERAL_RELAY_COUNTS: '/v1/providers/{providerid}/general-relay-counts',
   PROVIDER_PAYMENT_RECIEPTS: '/v1/providers/{providerid}/payment-receipts',
   PROVIDER_GATEWAYS: '/v1/providers/{providerid}/gateways',
   PROVIDER_GATEWAY: '/v1/providers/{providerid}/gateways/{gatewayid}',

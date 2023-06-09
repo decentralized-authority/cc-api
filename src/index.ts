@@ -29,7 +29,7 @@ import { CCServer } from './cc-server';
 import { httpResponse } from './util';
 import { PoktUtils } from './pokt-utils';
 import {
-  ProviderGatewayErrorLogPostBody,
+  ProviderGatewayErrorLogPostBody, ProviderGeneralRelayLogsPostBody, ProviderPaymentReceiptsPostBody,
   ProvidersHandler,
   ProviderUnlockPostBody
 } from './route-handlers/providers-handler';
@@ -223,6 +223,14 @@ const postLogsBody: ProviderGatewayErrorLogPostBody = {
 const postAccountRelayInvoicesBody: AccountRelayInvoicesPostBody = {
   count: 0,
 };
+const postProviderGeneralRelayLogsBody: ProviderGeneralRelayLogsPostBody = {
+  startTime: 0,
+  endTime: 0,
+};
+const postProviderPaymentReceiptsBody: ProviderPaymentReceiptsPostBody = {
+  startTime: 0,
+  endTime: 0,
+};
 
 server
   // rootHandler routes
@@ -257,6 +265,9 @@ server
   .get(routes.PROVIDER_GATEWAY, providerHandler.getProviderGateway, true, null)
   .get(routes.PROVIDER_GATEWAY_RPC_ENDPOINTS, providerHandler.getProviderGatewayRpcEndpoints, true, null)
   .get(routes.PROVIDER_GATEWAY_HOSTS, providerHandler.getProviderGatewayHosts, true, null)
+  .post(routes.PROVIDER_GENERAL_RELAY_LOGS, providerHandler.postProviderGeneralRelayLogs, true, postProviderGeneralRelayLogsBody)
+  .post(routes.PROVIDER_GENERAL_RELAY_COUNTS, providerHandler.postProviderGeneralRelayCounts, true, postProviderGeneralRelayLogsBody)
+  .post(routes.PROVIDER_PAYMENT_RECIEPTS, providerHandler.postProviderPaymentReceipts, true, postProviderPaymentReceiptsBody)
   .post(routes.PROVIDER_GATEWAY_ERROR_LOG, providerHandler.postProviderGatewayErrorLog, true, postLogsBody)
   .post(routes.PROVIDER_GATEWAY_INFO_LOG, providerHandler.postProviderGatewayInfoLog, true, postLogsBody)
   .post(routes.PROVIDER_GATEWAY_SERVER_NOTICE_LOG, providerHandler.postProviderGatewayServerNoticeLog, true, postLogsBody)
@@ -273,6 +284,9 @@ server
       routes.PROVIDER_GATEWAY,
       routes.PROVIDER_GATEWAY_RPC_ENDPOINTS,
       routes.PROVIDER_GATEWAY_HOSTS,
+      routes.PROVIDER_GENERAL_RELAY_LOGS,
+      routes.PROVIDER_GENERAL_RELAY_COUNTS,
+      routes.PROVIDER_PAYMENT_RECIEPTS,
       routes.PROVIDER_GATEWAY_ERROR_LOG,
       routes.PROVIDER_GATEWAY_INFO_LOG,
       routes.PROVIDER_GATEWAY_SERVER_NOTICE_LOG,

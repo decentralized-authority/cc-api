@@ -198,7 +198,11 @@ describe('ProvidersHandler', function() {
         start: dayjs.utc().subtract(25, 'hours').valueOf(),
         end: dayjs.utc().subtract(24, 'hours').valueOf(),
         time: dayjs.utc().subtract(24, 'hours').valueOf(),
-        relays: {},
+        relays: {
+          '0021': 100,
+          '0009': 900,
+          '03df': 1000,
+        },
       };
       await dbUtils.createGeneralRelayLog(log);
       return log;
@@ -410,6 +414,69 @@ describe('ProvidersHandler', function() {
         const parsed = JSON.parse(res.body);
         parsed.should.be.an.Array();
         parsed.length.should.equal(length);
+      }
+    });
+  });
+
+  describe('.postProviderGeneralRelayCounts()', function() {
+    it('should get a provider\'s recent general relay logs', async function() {
+      const times: [number, number, number][] = [
+        [
+          dayjs.utc().subtract(26, 'hours').valueOf(),
+          dayjs.utc().subtract(25, 'hours').valueOf(),
+          0,
+        ],
+        [
+          dayjs.utc().subtract(2, 'hours').valueOf(),
+          dayjs.utc().subtract(1, 'hours').valueOf(),
+          0,
+        ],
+        [
+          dayjs.utc().subtract(25, 'hours').valueOf(),
+          dayjs.utc().subtract(6, 'hours').valueOf(),
+          3,
+        ],
+        [
+          0,
+          0,
+          3,
+        ],
+        [
+          dayjs.utc().subtract(25, 'hours').valueOf(),
+          0,
+          3,
+        ],
+        [
+          0,
+          dayjs.utc().subtract(23, 'hours').valueOf(),
+          3,
+        ],
+      ];
+      for(const [ startTime, endTime, length ] of times) {
+        let body: any = {};
+        if(startTime)
+          body.startTime = startTime;
+        if(endTime)
+          body.endTime = endTime;
+        // @ts-ignore
+        const res = await providersHandler.postProviderGeneralRelayCounts({
+          resource: '',
+          httpMethod: '',
+          pathParameters: {
+            providerid: provider.id,
+          },
+          headers: {'x-api-key': sessionToken.token},
+          body: JSON.stringify(body),
+        });
+        res.should.be.an.Object();
+        res.statusCode.should.equal(200);
+        res.body.should.be.a.String();
+        const parsed = JSON.parse(res.body);
+        parsed.should.be.an.Array();
+        parsed.length.should.equal(length);
+        for(const item of parsed) {
+          item.should.be.an.Object();
+        }
       }
     });
   });

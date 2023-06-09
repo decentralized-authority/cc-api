@@ -918,6 +918,31 @@ export class DBUtils {
     });
   }
 
+  async getGeneralRelayLogsByProvider(providerId: string, startTime: number, endTime: number): Promise<GeneralRelayLog[]> {
+    const gateways = await this.getGatewaysByProvider(providerId);
+    const gatewayToRegion: { [gateway: string]: string } = {};
+    for(const gateway of gateways) {
+      gatewayToRegion[gateway.id] = gateway.region;
+    }
+    return await new Promise<GeneralRelayLog[]>((resolve, reject) => {
+      this.db.GeneralRelayLogs
+        .scan()
+        .loadAll()
+        .where('gateway').in(gateways.map(g => g.id))
+        .where('time').between(startTime, endTime)
+        .exec((err, res) => {
+          if(err) {
+            reject(err);
+          } else {
+            const { Items } = res;
+            resolve(Items.map((i: { attrs: any; }) => {
+              return i.attrs;
+            }));
+          }
+        });
+    });
+  }
+
   deleteGeneralRelayLog(gateway: string, time: number): Promise<boolean> {
     return new Promise<boolean>((resolve, reject) => {
       this.db.GeneralRelayLogs.destroy({gateway, time}, err => {

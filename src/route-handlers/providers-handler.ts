@@ -388,27 +388,58 @@ export class ProvidersHandler extends RouteHandler {
     }
     endTime = endTime || dayjs.utc().valueOf();
     startTime = startTime || dayjs.utc(endTime).subtract(7, 'day').valueOf();
-    const gateways = await this._dbUtils.getGatewaysByProvider(provider.id);
-
-    const logs = await new Promise<GeneralRelayLog[]>((resolve, reject) => {
-      this._db.GeneralRelayLogs
-        .scan()
-        .loadAll()
-        .where('gateway').in(gateways.map(g => g.id))
-        .where('time').between(startTime, endTime)
-        .exec((err, res) => {
-          if(err) {
-            reject(err);
-          } else {
-            const { Items } = res;
-            resolve(Items.map((i: { attrs: any; }) => {
-              return i.attrs;
-            }));
-          }
-        });
-    });
-
+    const logs = await this._dbUtils.getGeneralRelayLogsByProvider(provider.id, startTime, endTime);
     return httpResponse(200, logs);
+  }
+
+  async postProviderGeneralRelayCounts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
+    const { body = '{}', pathParameters } = event;
+    // @ts-ignore
+    const { providerid: providerId } = pathParameters;
+    const [ errResponse, provider, apiKey ] = await getProviderAccountFromToken(this._db, event, providerId);
+    if(errResponse) {
+      return errResponse;
+    }
+    if(apiKey.level < 1)
+      return response403();
+    if(!body || !goodBody(body, isPlainObject))
+      return httpErrorResponse(400, 'Invalid body');
+    const parsed = JSON.parse(body);
+    let { startTime, endTime } = parsed as ProviderGeneralRelayLogsPostBody;
+    if((startTime && !isNumber(startTime)) || (endTime && !isNumber(endTime))) {
+      return response400('startTime and endTime must be numbers');
+    }
+    endTime = endTime || dayjs.utc().valueOf();
+    startTime = startTime || dayjs.utc(endTime).subtract(7, 'day').valueOf();
+    const logs = await this._dbUtils.getGeneralRelayLogsByProvider(provider.id, startTime, endTime);
+    const gateways = await this._dbUtils.getGatewaysByProvider(provider.id);
+    const gatewayToRegion: { [gateway: string]: string } = {};
+    for(const gateway of gateways) {
+      gatewayToRegion[gateway.id] = gateway.region;
+    }
+    const byChainByRegion: { [chain: string]: { [region: string]: number } } = {};
+    for(const log of logs) {
+      const region = gatewayToRegion[log.gateway];
+      for(const [chain, count] of Object.entries(log.relays)) {
+        if(!byChainByRegion[chain])
+          byChainByRegion[chain] = {};
+        if(!byChainByRegion[chain][region])
+          byChainByRegion[chain][region] = 0;
+        byChainByRegion[chain][region] += count;
+      }
+    }
+    const metrics: {chain: string, total: number, startTime: string, endTime: string, byRegion: {[region: string]: number}}[] = [];
+    for(const [chain, byRegion] of Object.entries(byChainByRegion)) {
+      const total = Object.values(byRegion).reduce((acc, c) => acc + c, 0);
+      metrics.push({
+        chain,
+        total,
+        startTime: dayjs.utc(startTime).toISOString(),
+        endTime: dayjs.utc(endTime).toISOString(),
+        byRegion
+      });
+    }
+    return httpResponse(200, metrics);
   }
 
   async postProviderPaymentReceipts(event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> {
