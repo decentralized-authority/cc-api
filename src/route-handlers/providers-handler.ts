@@ -431,15 +431,20 @@ export class ProvidersHandler extends RouteHandler {
         byChainByRegion[chain][region] += count;
       }
     }
-    const metrics: {chain: string, total: number, startTime: string, endTime: string, byRegion: {[region: string]: number}}[] = [];
+    const metrics: {chain: string, total: string, startTime: string, endTime: string, byRegion: {[region: string]: string}}[] = [];
     for(const [chain, byRegion] of Object.entries(byChainByRegion)) {
       const total = Object.values(byRegion).reduce((acc, c) => acc + c, 0);
       metrics.push({
         chain,
-        total,
+        total: total.toString(10),
         startTime: dayjs.utc(startTime).toISOString(),
         endTime: dayjs.utc(endTime).toISOString(),
-        byRegion
+        byRegion: Object.entries(byRegion).reduce((acc, [region, count]) => {
+          return {
+            ...acc,
+            [region]: count.toString(10)
+          };
+        }, {}),
       });
     }
     return httpResponse(200, metrics);
